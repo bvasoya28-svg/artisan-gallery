@@ -1,12 +1,6 @@
 pluginManagement {
     repositories {
-        google {
-            content {
-                includeGroupByRegex("com\\.android.*")
-                includeGroupByRegex("com\\.google.*")
-                includeGroupByRegex("androidx.*")
-            }
-        }
+        google()
         mavenCentral()
         gradlePluginPortal()
     }
@@ -18,9 +12,6 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-// ... keep the top part (pluginManagement)
 
-rootProject.name = "Handmade products"
-include(":web") // REMOVE :app so Render doesn't waste time on the Android app
-
- 
+rootProject.name = "artisan-gallery"
+include(":web")
