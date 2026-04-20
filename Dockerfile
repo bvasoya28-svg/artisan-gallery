@@ -1,10 +1,10 @@
-# Use an official JDK runtime as a parent image
-FROM eclipse-temurin:17-jdk-alpine
+# Use Java 21 (matching your project's requirement)
+FROM eclipse-temurin:21-jdk-alpine
 
-# Set the working directory in the container
+# Set the working directory
 WORKDIR /app
 
-# Copy all root files (gradlew, gradle, build scripts)
+# Copy all root files
 COPY gradlew .
 COPY gradle gradle
 COPY *.kts .
@@ -14,7 +14,7 @@ COPY *.properties .
 COPY web web
 COPY app app
 
-# Build only the web application
+# Build the web application
 RUN chmod +x gradlew
 RUN ./gradlew :web:bootJar --no-daemon
 
