@@ -7,8 +7,10 @@ plugins {
 group = 'com.artisan'
 version = '0.0.1-SNAPSHOT'
 
+// Use simple compatibility instead of Toolchain to speed up cloud builds
 java {
-    sourceCompatibility = '21'
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
 }
 
 repositories {
@@ -27,4 +29,9 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+// Skip generating plain jar to save time
+tasks.named('jar') {
+    enabled = false
 }
