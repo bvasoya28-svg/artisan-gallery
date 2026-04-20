@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Create Account - Artisan Gallery</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <style>
+        .login-page {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: var(--background);
+        }
+        .login-box {
+            background: white;
+            padding: 50px;
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            width: 100%;
+            max-width: 450px;
+            text-align: center;
+        }
+        .login-box input {
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 30px;
+            box-sizing: border-box;
+            outline: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-page">
+        <div class="login-box">
+            <h1 class="serif-font" style="color: var(--forest-green); margin-bottom: 5px;">Join the Gallery</h1>
+            <p style="color: #666; margin-bottom: 30px;">Create an account to start shopping</p>
+
+            <p th:if="${error}" th:text="${error}" style="color: #d63031; margin-bottom: 20px;"></p>
+
+            <form th:if="${otpSent == null}" th:action="@{/register}" method="post">
+                <input type="text" name="fullName" placeholder="Full Name" required>
+                <input type="email" name="email" placeholder="Email Address" required>
+                <input type="password" name="password" placeholder="Create Password" required>
+                <button type="submit" class="btn-primary">Send OTP to Email</button>
+            </form>
+
+            <form th:if="${otpSent}" th:action="@{/register/verify}" method="post">
+                <p style="margin-bottom: 20px;">We've sent a 6-digit code to <br><b th:text="${email}"></b></p>
+                <input type="text" name="otp" placeholder="Enter 6-Digit OTP" required pattern="\d{6}" maxlength="6">
+                <button type="submit" class="btn-primary">Verify & Register</button>
+                <p style="margin-top: 20px;"><a th:href="@{/register}" style="color: #666; font-size: 0.9rem;">Change Email</a></p>
+            </form>
+
+            <p style="margin-top: 30px;">Already have an account? <a th:href="@{/login}" style="color: var(--forest-green); font-weight: bold; text-decoration: none;">Sign In</a></p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>My Account - Artisan Gallery</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <header class="sticky-header">
+        <div class="container header-content">
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <a th:href="@{/home}" style="color: var(--forest-green); font-size: 1.2rem;"><i class="fas fa-chevron-left"></i></a>
+                <div class="logo">
+                    <h1><a th:href="@{/home}">Artisan Gallery</a></h1>
+                </div>
+            </div>
+
+            <div class="user-profile-header" th:if="${user != null}">
+                <span th:text="${user.fullName}">User Name</span>
+                <img th:src="${user.profilePicture.startsWith('http') ? user.profilePicture : '/images/' + user.profilePicture}" alt="Profile">
+            </div>
+        </div>
+    </header>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="bottom-nav">
+        <a th:href="@{/home}" class="bottom-nav-item">
+            <i class="fas fa-home"></i>
+            <span>Home</span>
+        </a>
+
+        <a th:href="@{/search}" class="bottom-nav-item">
+            <i class="fas fa-search"></i>
+            <span>Search</span>
+        </a>
+
+        <a th:href="@{/cart}" class="bottom-nav-item">
+            <i class="fas fa-shopping-cart"></i>
+            <span>Cart</span>
+        </a>
+
+        <a th:href="@{/account}" class="bottom-nav-item active" style="color: var(--tan);">
+            <i class="fas fa-user-circle"></i>
+            <span>Account</span>
+        </a>
+    </nav>
+
+
+    <div class="container sub-page-container">
+        <h1 class="serif-font" style="color: var(--forest-green); margin-bottom: 40px; margin-top: 20px;">Account Control Center</h1>
+
+        <div class="account-grid">
+            <!-- Order History -->
+            <a th:href="@{/account/orders}" class="account-section-card" style="text-decoration: none; color: inherit;">
+                <i class="fas fa-box-open" style="font-size: 2.5rem; color: var(--forest-green); margin-bottom: 15px;"></i>
+                <h3 class="serif-font">Order History</h3>
+                <p style="color: #666; font-size: 0.85rem;">Track your purchases</p>
+            </a>
+
+            <!-- Security Section -->
+            <a th:href="@{/account/details}" class="account-section-card" style="text-decoration: none; color: inherit;">
+                <i class="fas fa-user-shield" style="font-size: 2.5rem; color: var(--forest-green); margin-bottom: 15px;"></i>
+                <h3 class="serif-font">Security Settings</h3>
+                <p style="color: #666; font-size: 0.85rem;">Password & Protection</p>
+            </a>
+
+            <!-- Address Management -->
+            <a th:href="@{/account/address}" class="account-section-card" style="text-decoration: none; color: inherit;">
+                <i class="fas fa-map-marked-alt" style="font-size: 2.5rem; color: var(--forest-green); margin-bottom: 15px;"></i>
+                <h3 class="serif-font">Your Addresses</h3>
+                <p style="color: #666; font-size: 0.85rem;">Delivery locations</p>
+            </a>
+
+            <!-- Sell Your Item -->
+            <a th:href="@{/sell}" class="account-section-card" style="text-decoration: none; color: inherit;">
+                <i class="fas fa-store" style="font-size: 2.5rem; color: var(--forest-green); margin-bottom: 15px;"></i>
+                <h3 class="serif-font">Sell Your Item</h3>
+                <p style="color: #666; font-size: 0.85rem;">Artisan dashboard</p>
+            </a>
+
+            <!-- Cart -->
+            <a th:href="@{/cart}" class="account-section-card" style="text-decoration: none; color: inherit;">
+                <i class="fas fa-shopping-basket" style="font-size: 2.5rem; color: var(--forest-green); margin-bottom: 15px;"></i>
+                <h3 class="serif-font">My Shopping Cart</h3>
+                <p style="color: #666; font-size: 0.85rem;">Review your items</p>
+            </a>
+
+            <!-- Contact Info -->
+            <a th:href="@{/account/contact}" class="account-section-card" style="text-decoration: none; color: inherit;">
+                <i class="fas fa-headset" style="font-size: 2.5rem; color: var(--forest-green); margin-bottom: 15px;"></i>
+                <h3 class="serif-font">Contact Info</h3>
+                <p style="color: #666; font-size: 0.85rem;">Support & Assistance</p>
+            </a>
+        </div>
+    </div>
+</body>
+</html>

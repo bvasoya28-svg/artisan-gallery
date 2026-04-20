@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Seller Agreement - Artisan Gallery</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script>
+        function toggleButton() {
+            const checkbox = document.getElementById('terms-checkbox');
+            const btn = document.getElementById('accept-btn');
+            if (checkbox.checked) {
+                btn.disabled = false;
+                btn.style.opacity = 1;
+                btn.style.cursor = 'pointer';
+            } else {
+                btn.disabled = true;
+                btn.style.opacity = 0.5;
+                btn.style.cursor = 'not-allowed';
+            }
+        }
+    </script>
+</head>
+<body>
+    <header class="sticky-header">
+        <div class="container header-content">
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <a th:href="@{/account}" style="color: var(--forest-green); font-size: 1.2rem;"><i class="fas fa-chevron-left"></i></a>
+                <div class="logo">
+                    <h1><a th:href="@{/home}">Artisan Gallery</a></h1>
+                </div>
+            </div>
+
+            <div class="user-profile-header" th:if="${user != null}">
+                <span th:text="${user.fullName}">User Name</span>
+                <img th:src="${user.profilePicture.startsWith('http') ? user.profilePicture : '/images/' + user.profilePicture}" alt="Profile">
+            </div>
+        </div>
+    </header>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="bottom-nav">
+        <a th:href="@{/home}" class="bottom-nav-item">
+            <i class="fas fa-home"></i>
+            <span>Home</span>
+        </a>
+
+        <a th:href="@{/search}" class="bottom-nav-item">
+            <i class="fas fa-search"></i>
+            <span>Search</span>
+        </a>
+
+        <a th:href="@{/cart}" class="bottom-nav-item">
+            <i class="fas fa-shopping-cart"></i>
+            <span>Cart</span>
+        </a>
+
+        <a th:href="@{/account}" class="bottom-nav-item active" style="color: var(--tan);">
+            <i class="fas fa-user-circle"></i>
+            <span>Account</span>
+        </a>
+    </nav>
+
+    <div class="container sub-page-container" style="padding-bottom: 100px; margin-top: 40px;">
+        <div class="agreement-box">
+            <h1 class="serif-font" style="color: var(--forest-green); margin-top: 0; text-align: center;">Artisan Onboarding</h1>
+            <p style="color: #666; margin-bottom: 30px; text-align: center;">Welcome to the gallery. Please read and accept our creator terms to start selling.</p>
+
+            <div id="terms-area" style="background: #fafafa; padding: 30px; border-radius: 12px; border: 1px solid #eee; margin-bottom: 30px; line-height: 1.8;">
+                <h3 class="serif-font" style="color: var(--forest-green);">1. Handmade Commitment</h3>
+                <p>Every item listed in the Artisan Gallery must be 100% handmade, vintage, or a unique craft supply created by you. We strictly prohibit the resale of mass-produced commercial items.</p>
+
+                <h3 class="serif-font" style="color: var(--forest-green);">2. Seller Constraints (Lifetime Slots)</h3>
+                <p>Each artisan is limited to a maximum of <strong>5 lifetime listing slots</strong>. Focus on showcasing your finest work. Please note that <strong>deleting a product does not reset your slot count</strong>; once a masterpiece is launched, it occupies one of your 5 available slots permanently (e.g. if you upload 1 item and delete it, your count remains 1/5).</p>
+
+                <h3 class="serif-font" style="color: var(--forest-green);">3. Image & Description Standards</h3>
+                <p>Product photographs must be clear, high-resolution, and represent the actual item for sale. Descriptions must be honest, detailing materials used and the story behind the creation.</p>
+
+                <h3 class="serif-font" style="color: var(--forest-green);">4. Stock Management</h3>
+                <p>Artisans are responsible for maintaining accurate stock status. If an item is unavailable, it must be marked as "Out of Stock" immediately through your dashboard. You can toggle this status at any time.</p>
+
+                <h3 class="serif-font" style="color: var(--forest-green);">5. Ethical Conduct</h3>
+                <p>Artisans must engage with customers professionally and fulfill orders within the promised timeframe. Failure to maintain high service standards may result in removal from the gallery.</p>
+            </div>
+
+            <div style="margin: 25px 0; display: flex; align-items: center; gap: 12px; justify-content: center; background: #fdfaf5; padding: 20px; border: 1px solid var(--tan); border-radius: 10px;">
+                <input type="checkbox" id="terms-checkbox" onchange="toggleButton()" style="width: 22px; height: 22px; cursor: pointer;">
+                <label for="terms-checkbox" style="font-size: 1rem; font-weight: bold; cursor: pointer; color: var(--forest-green);">I agree and I have read all terms and conditions</label>
+            </div>
+
+            <div style="text-align: center;">
+                <form th:action="@{/sell/agree}" method="POST">
+                    <button id="accept-btn" type="submit" class="btn-primary"
+                            style="width: auto; padding: 18px 80px; font-size: 1.1rem; opacity: 0.5; cursor: not-allowed; border-radius: 30px;" disabled>
+                        Accept & Continue
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

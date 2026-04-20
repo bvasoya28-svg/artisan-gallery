@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Contact Us - Artisan Gallery</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .contact-card {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            margin-top: 30px;
+            border: 1px solid #eee;
+        }
+        .contact-method {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .contact-method i {
+            font-size: 2rem;
+            color: var(--forest-green);
+            width: 50px;
+        }
+        .contact-method h3 {
+            margin: 0;
+            color: var(--charcoal);
+        }
+        .contact-method p {
+            margin: 5px 0 0 0;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <header class="sticky-header">
+        <div class="container header-content">
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <a th:href="@{/account}" style="color: var(--forest-green); font-size: 1.2rem;"><i class="fas fa-chevron-left"></i></a>
+                <div class="logo">
+                    <h1><a th:href="@{/home}">Artisan Gallery</a></h1>
+                </div>
+            </div>
+            <div class="user-profile-header" th:if="${user != null}">
+                <span th:text="${user.fullName}">User Name</span>
+                <img th:src="${user.profilePicture.startsWith('http') ? user.profilePicture : '/images/' + user.profilePicture}" alt="Profile">
+            </div>
+        </div>
+    </header>
+
+    <div class="container sub-page-container">
+        <div style="max-width: 800px; margin: 0 auto;">
+            <h1 class="serif-font" style="color: var(--forest-green); margin-bottom: 20px;">Contact Support</h1>
+            <p style="font-size: 1.1rem; color: #555;">Have questions about your order or seller account? We're here to help you 24/7.</p>
+
+            <div class="contact-card">
+                <div class="contact-method">
+                    <i class="fas fa-envelope-open-text"></i>
+                    <div>
+                        <h3>Email Support</h3>
+                        <p>support@artisangallery.com</p>
+                        <p style="font-size: 0.85rem;">Response within 24 hours</p>
+                    </div>
+                </div>
+
+                <div class="contact-method">
+                    <i class="fas fa-phone-alt"></i>
+                    <div>
+                        <h3>Call Center</h3>
+                        <p>+91 98765 43210</p>
+                        <p style="font-size: 0.85rem;">Available Mon-Sat, 9:00 AM - 6:00 PM</p>
+                    </div>
+                </div>
+
+                <div class="contact-method">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <div>
+                        <h3>Headquarters</h3>
+                        <p>123 Artisan Lane, Craft City</p>
+                        <p>Gujarat, India - 395006</p>
+                    </div>
+                </div>
+
+                <div style="margin-top: 40px; padding-top: 30px; border-top: 1px dashed #ddd;">
+                    <h2 class="serif-font" style="color: var(--forest-green); margin-bottom: 25px; text-align: center;">Frequently Asked Questions</h2>
+
+                    <div style="margin-bottom: 25px;">
+                        <h4 style="margin: 0 0 10px 0; color: var(--forest-green);">1. How do I become an artisan seller?</h4>
+                        <p style="margin: 0; color: #666; font-size: 0.95rem;">Go to the Account Center and select "Sell Your Item". After accepting the Artisan Agreement, you can start uploading your masterpieces (up to 5 items).</p>
+                    </div>
+
+                    <div style="margin-bottom: 25px;">
+                        <h4 style="margin: 0 0 10px 0; color: var(--forest-green);">2. Is there a listing fee?</h4>
+                        <p style="margin: 0; color: #666; font-size: 0.95rem;">The first 5 listings are completely free for all verified creators. We want to support the artisan community by keeping our platform accessible.</p>
+                    </div>
+
+                    <div style="margin-bottom: 25px;">
+                        <h4 style="margin: 0 0 10px 0; color: var(--forest-green);">3. How long does shipping take?</h4>
+                        <p style="margin: 0; color: #666; font-size: 0.95rem;">Since each item is handmade, shipping times vary. Generally, items are dispatched within 2-4 days. You can track your order status in the "Order History" section.</p>
+                    </div>
+
+                    <div style="margin-bottom: 25px;">
+                        <h4 style="margin: 0 0 10px 0; color: var(--forest-green);">4. Can I delete a product once it's uploaded?</h4>
+                        <p style="margin: 0; color: #666; font-size: 0.95rem;">Yes, you can delete items from your Seller Dashboard. However, please note that deleting an item does not reset your 5-product limit.</p>
+                    </div>
+
+                    <div style="margin-top: 40px; padding-top: 30px; border-top: 1px dashed #ddd; text-align: center;">
+                        <p style="font-weight: bold; color: var(--tan);">For urgent order issues, please include your Order ID in the email subject line.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="bottom-nav">
+        <a th:href="@{/home}" class="bottom-nav-item">
+            <i class="fas fa-home"></i>
+            <span>Home</span>
+        </a>
+        <a th:href="@{/search}" class="bottom-nav-item">
+            <i class="fas fa-search"></i>
+            <span>Search</span>
+        </a>
+        <a th:href="@{/cart}" class="bottom-nav-item">
+            <i class="fas fa-shopping-cart"></i>
+            <span>Cart</span>
+        </a>
+        <a th:href="@{/account}" class="bottom-nav-item active" style="color: var(--tan);">
+            <i class="fas fa-user-circle"></i>
+            <span>Account</span>
+        </a>
+    </nav>
+</body>
+</html>

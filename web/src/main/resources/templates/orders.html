@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Your Orders - Artisan Gallery</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <header class="sticky-header">
+        <div class="container header-content">
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <a th:href="@{/account}" style="color: var(--forest-green); font-size: 1.2rem;"><i class="fas fa-chevron-left"></i></a>
+                <div class="logo">
+                    <h1><a th:href="@{/home}">Artisan Gallery</a></h1>
+                </div>
+            </div>
+
+            <div class="user-profile-header" th:if="${user != null}">
+                <span th:text="${user.fullName}">User Name</span>
+                <img th:src="${user.profilePicture.startsWith('http') ? user.profilePicture : '/images/' + user.profilePicture}" alt="Profile">
+            </div>
+        </div>
+    </header>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="bottom-nav">
+        <a th:href="@{/home}" class="bottom-nav-item">
+            <i class="fas fa-home"></i>
+            <span>Home</span>
+        </a>
+
+        <a th:href="@{/search}" class="bottom-nav-item">
+            <i class="fas fa-search"></i>
+            <span>Search</span>
+        </a>
+
+        <a th:href="@{/cart}" class="bottom-nav-item">
+            <i class="fas fa-shopping-cart"></i>
+            <span>Cart</span>
+        </a>
+
+        <a th:href="@{/account}" class="bottom-nav-item active" style="color: var(--tan);">
+            <i class="fas fa-user-circle"></i>
+            <span>Account</span>
+        </a>
+    </nav>
+
+
+    <div class="container sub-page-container">
+        <h1 class="serif-font" style="color: var(--forest-green); margin-bottom: 30px; margin-top: 20px;">Your Orders</h1>
+
+        <div th:if="${#lists.isEmpty(orders)}" style="text-align: center; padding: 100px 0;">
+             <i class="fas fa-box-open" style="font-size: 5rem; color: #ddd; margin-bottom: 20px; display: block;"></i>
+             <h2 class="serif-font">You haven't placed any orders yet.</h2>
+             <p>Once you purchase a masterpiece, it will appear here.</p>
+             <a th:href="@{/home}" class="btn-primary" style="display: inline-block; width: auto; padding: 12px 40px; margin-top: 20px;">Start Shopping</a>
+        </div>
+
+        <div th:each="order : ${orders}" class="review-box" style="padding: 25px; border: 1px solid #eee;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+                <div>
+                    <span style="font-size: 0.85rem; color: #888; text-transform: uppercase;">Order #[[${order.id}]]</span>
+                    <h3 class="serif-font" style="margin: 5px 0; color: var(--forest-green);" th:text="${order.productName}"></h3>
+                    <p style="margin: 0; font-size: 0.9rem; color: #666;" th:text="${#temporals.format(order.orderDate, 'dd MMMM yyyy, HH:mm')}"></p>
+                </div>
+                <div style="text-align: right;">
+                    <span th:class="${order.status == 'CANCELLED' ? 'status-pill oos' : 'status-pill'}"
+                          th:text="${order.status}"
+                          style="display: inline-block; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 0.85rem;"></span>
+                    <p style="margin: 10px 0 0 0; font-weight: bold; font-size: 1.1rem; color: var(--forest-green);"
+                       th:text="'₹' + ${#numbers.formatDecimal(order.price, 0, 'COMMA', 2, 'POINT')}"></p>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 20px; align-items: center; border-top: 1px solid #eee; padding-top: 20px;">
+                <img th:src="${order.imageUrl.startsWith('http') ? order.imageUrl : '/images/' + order.imageUrl}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px;">
+                <div style="flex: 1;">
+                    <p style="margin: 0; font-size: 0.9rem;"><i class="fas fa-map-marker-alt" style="color: var(--tan); width: 20px;"></i> Delivered to: <span th:text="${order.address}"></span></p>
+                    <p style="margin: 5px 0 0 0; font-size: 0.9rem;"><i class="fas fa-credit-card" style="color: var(--tan); width: 20px;"></i> Payment: <span th:text="${order.paymentMethod}"></span></p>
+                </div>
+                <div th:if="${order.status != 'CANCELLED' && order.status != 'DELIVERED'}">
+                    <form th:action="@{/account/orders/cancel}" method="POST" onsubmit="return confirm('Cancel this order?')">
+                        <input type="hidden" name="orderId" th:value="${order.id}">
+                        <button type="submit" style="background: none; border: 1px solid #d63031; color: #d63031; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: bold;">Cancel Order</button>
+                    </form>
+                </div>
+                <div th:if="${order.status == 'CANCELLED'}">
+                    <form th:action="@{/account/orders/delete}" method="POST" onsubmit="return confirm('Remove this record from your history?')">
+                        <input type="hidden" name="orderId" th:value="${order.id}">
+                        <button type="submit" style="background: none; border: none; color: #888; cursor: pointer; font-size: 0.85rem; text-decoration: underline;">Remove Record</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
