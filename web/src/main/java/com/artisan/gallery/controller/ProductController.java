@@ -1,6 +1,10 @@
 package com.artisan.gallery.controller;
 
 import com.artisan.gallery.model.Product;
+import com.artisan.gallery.model.Review;
+import com.artisan.gallery.model.User;
+import com.artisan.gallery.repository.ReviewRepository;
+import com.artisan.gallery.service.CloudinaryService;
 import com.artisan.gallery.service.ProductService;
 import com.artisan.gallery.service.UserService;
 import jakarta.servlet.http.HttpSession;
@@ -8,14 +12,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
-
-import com.artisan.gallery.model.Review;
-import com.artisan.gallery.repository.ReviewRepository;
 import org.springframework.web.multipart.MultipartFile;
+
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -31,65 +30,15 @@ public class ProductController {
     @Autowired
     private CloudinaryService cloudinaryService;
 
+    @Autowired
+    private ReviewRepository reviewRepository;
+
     @GetMapping("/")
     public String index(HttpSession session) {
         if (session.getAttribute("userEmail") != null) {
             return "redirect:/home";
         }
         return "redirect:/login";
-    }
-
-    @GetMapping("/seller-agreement")
-    public String sellerAgreement(HttpSession session, Model model) {
-        String email = (String) session.getAttribute("userEmail");
-        if (email == null) return "redirect:/login";
-
-        com.artisan.gallery.model.User user = userService.getUserByEmail(email);
-        if (user == null) return "redirect:/login";
-
-        model.addAttribute("user", user);
-        return "seller-agreement";
-    }
-
-    @Autowired
-    private ReviewRepository reviewRepository;
-
-    @GetMapping("/search")
-    public String searchPage(@RequestParam(required = false) String query, Model model, HttpSession session) {
-        String userEmail = (String) session.getAttribute("userEmail");
-        if (userEmail == null) return "redirect:/login";
-        
-        com.artisan.gallery.model.User user = userService.getUserByEmail(userEmail);
-        if (user == null) {
-            session.invalidate();
-            return "redirect:/login";
-        }
-
-        model.addAttribute("user", user);
-        model.addAttribute("query", query);
-        
-        // Handle Recent Searches
-        List<String> recentSearches = (List<String>) session.getAttribute("recentSearches");
-        if (recentSearches == null) {
-            recentSearches = new java.util.ArrayList<>();
-        }
-
-        if (query != null && !query.trim().isEmpty()) {
-            String trimmedQuery = query.trim();
-            model.addAttribute("results", productService.searchProducts(trimmedQuery));
-            
-            // Store search in session (Recent Searches)
-            if (!recentSearches.contains(trimmedQuery)) {
-                recentSearches.add(0, trimmedQuery);
-                if (recentSearches.size() > 5) recentSearches.remove(5);
-                session.setAttribute("recentSearches", recentSearches);
-            }
-        }
-        
-        model.addAttribute("recentSearches", recentSearches);
-        model.addAttribute("suggestions", List.of("Pottery", "Paintings", "Jewelry", "Home Decor", "Vintage"));
-        
-        return "search";
     }
 
     @GetMapping("/home")
@@ -100,7 +49,7 @@ public class ProductController {
         String userEmail = (String) session.getAttribute("userEmail");
         if (userEmail == null) return "redirect:/login";
 
-        com.artisan.gallery.model.User user = userService.getUserByEmail(userEmail);
+        User user = userService.getUserByEmail(userEmail);
         if (user == null) {
             session.invalidate();
             return "redirect:/login";
@@ -128,18 +77,40 @@ public class ProductController {
         return "home";
     }
 
-    @GetMapping("/category/{name}")
-    public String viewCategory(@PathVariable String name, Model model, HttpSession session) {
+    @GetMapping("/search")
+    public String searchPage(@RequestParam(required = false) String query, Model model, HttpSession session) {
         String userEmail = (String) session.getAttribute("userEmail");
         if (userEmail == null) return "redirect:/login";
         
-        com.artisan.gallery.model.User user = userService.getUserByEmail(userEmail);
-        if (user == null) return "redirect:/login";
+        User user = userService.getUserByEmail(userEmail);
+        if (user == null) {
+            session.invalidate();
+            return "redirect:/login";
+        }
 
         model.addAttribute("user", user);
-        model.addAttribute("category", name);
-        model.addAttribute("products", productService.getProductsByCategory(name));
-        return "category";
+        model.addAttribute("query", query);
+        
+        List<String> recentSearches = (List<String>) session.getAttribute("recentSearches");
+        if (recentSearches == null) {
+            recentSearches = new java.util.ArrayList<>();
+        }
+
+        if (query != null && !query.trim().isEmpty()) {
+            String trimmedQuery = query.trim();
+            model.addAttribute("results", productService.searchProducts(trimmedQuery));
+            
+            if (!recentSearches.contains(trimmedQuery)) {
+                recentSearches.add(0, trimmedQuery);
+                if (recentSearches.size() > 5) recentSearches.remove(5);
+                session.setAttribute("recentSearches", recentSearches);
+            }
+        }
+        
+        model.addAttribute("recentSearches", recentSearches);
+        model.addAttribute("suggestions", List.of("Pottery", "Paintings", "Jewelry", "Home Decor", "Vintage"));
+        
+        return "search";
     }
 
     @GetMapping("/product/{id}")
@@ -150,7 +121,7 @@ public class ProductController {
         String userEmail = (String) session.getAttribute("userEmail");
         if (userEmail == null) return "redirect:/login";
 
-        com.artisan.gallery.model.User user = userService.getUserByEmail(userEmail);
+        User user = userService.getUserByEmail(userEmail);
         if (user == null) return "redirect:/login";
         
         model.addAttribute("user", user);
@@ -177,16 +148,6 @@ public class ProductController {
         Review review = new Review(productId, userName, userEmail, rating, comment, imageUrl, LocalDateTime.now());
         reviewRepository.save(review);
         
-        return "redirect:/product/" + productId;
-    }
-
-    @PostMapping("/product/review/delete")
-    public String deleteReview(@RequestParam Long reviewId, @RequestParam Long productId, HttpSession session) {
-        Review review = reviewRepository.findById(reviewId).orElse(null);
-        String userEmail = (String) session.getAttribute("userEmail");
-        if (review != null && review.getUserEmail().equals(userEmail)) {
-            reviewRepository.deleteById(reviewId);
-        }
         return "redirect:/product/" + productId;
     }
 
