@@ -1,5 +1,5 @@
-# Use Java 17 (Matching your build.gradle)
-FROM eclipse-temurin:17-jdk-alpine
+# Use Java 21 (Matching your project's requirement)
+FROM eclipse-temurin:21-jdk-alpine
 
 # Set the working directory
 WORKDIR /app
@@ -7,11 +7,10 @@ WORKDIR /app
 # Copy gradle files
 COPY gradlew .
 COPY gradle gradle
-COPY build.gradle.kts .
-COPY settings.gradle.kts .
-COPY gradle.properties .
+COPY *.kts .
+COPY *.properties .
 
-# Copy ONLY the web module (ignore the android app)
+# Copy ONLY the web module
 COPY web web
 
 # Fix line endings and permissions
