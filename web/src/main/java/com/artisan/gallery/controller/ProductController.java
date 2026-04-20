@@ -28,6 +28,9 @@ public class ProductController {
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private CloudinaryService cloudinaryService;
+
     @GetMapping("/")
     public String index(HttpSession session) {
         if (session.getAttribute("userEmail") != null) {
@@ -166,15 +169,12 @@ public class ProductController {
         String userName = (String) session.getAttribute("userName");
         String userEmail = (String) session.getAttribute("userEmail");
         
-        String fileName = "";
+        String imageUrl = "";
         if (image != null && !image.isEmpty()) {
-            fileName = System.currentTimeMillis() + "_" + image.getOriginalFilename();
-            Path path = Paths.get("src/main/resources/static/images/" + fileName);
-            Files.createDirectories(path.getParent());
-            Files.write(path, image.getBytes());
+            imageUrl = cloudinaryService.uploadImage(image);
         }
 
-        Review review = new Review(productId, userName, userEmail, rating, comment, fileName, LocalDateTime.now());
+        Review review = new Review(productId, userName, userEmail, rating, comment, imageUrl, LocalDateTime.now());
         reviewRepository.save(review);
         
         return "redirect:/product/" + productId;

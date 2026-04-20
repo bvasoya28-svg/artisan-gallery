@@ -27,6 +27,9 @@ public class SellerController {
     @Autowired
     private ProductService productService;
 
+    @Autowired
+    private CloudinaryService cloudinaryService;
+
     private static final String UPLOAD_DIR = "src/main/resources/static/images/";
 
     @GetMapping
@@ -89,22 +92,19 @@ public class SellerController {
             return "redirect:/login";
         }
 
-        if (user.getLifetimeUploadCount() >= 5) {
-            model.addAttribute("error", "You have reached the maximum limit of 5 lifetime uploads.");
+        if (user.getLifetimeUploadCount() >= 15) {
+            model.addAttribute("error", "You have reached the maximum limit of 15 lifetime uploads.");
             model.addAttribute("user", user);
             model.addAttribute("myProducts", productService.getUserItems(email));
             return "upload";
         }
 
-        String fileName = "v1.jpg"; // Default
+        String imageUrl = "v1.jpg"; // Default
         if (!file.isEmpty()) {
-            fileName = System.currentTimeMillis() + "_" + file.getOriginalFilename();
-            Path path = Paths.get(UPLOAD_DIR + fileName);
-            Files.createDirectories(path.getParent());
-            Files.write(path, file.getBytes());
+            imageUrl = cloudinaryService.uploadImage(file);
         }
 
-        Product product = new Product(name, description, price, fileName, category, user.getFullName(), 5.0, 0, "2 Days", email);
+        Product product = new Product(name, description, price, imageUrl, category, user.getFullName(), 5.0, 0, "2 Days", email);
         product.setLocationType("National");
         product.setSpecificLocation("India");
         product.setInStock(inStock);
