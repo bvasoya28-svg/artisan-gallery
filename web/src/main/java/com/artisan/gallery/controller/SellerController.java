@@ -13,10 +13,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.LocalDateTime;
 
 @Controller
 @RequestMapping("/sell")
@@ -31,19 +27,17 @@ public class SellerController {
     @Autowired
     private CloudinaryService cloudinaryService;
 
-    private static final String UPLOAD_DIR = "src/main/resources/static/images/";
-
     @GetMapping
     public String sellPage(HttpSession session, Model model) {
         String email = (String) session.getAttribute("userEmail");
-        com.artisan.gallery.model.User user;
+        User user;
         
         if (email == null) {
-            user = new com.artisan.gallery.model.User("Guest", "guest@example.com", "", "", "Guest User", "v1.jpg", false);
+            return "redirect:/login";
         } else {
             user = userService.getUserByEmail(email);
             if (user == null) {
-                user = new com.artisan.gallery.model.User("Guest", "guest@example.com", "", "", "Guest User", "v1.jpg", false);
+                return "redirect:/login";
             }
         }
 
@@ -106,8 +100,6 @@ public class SellerController {
         }
 
         Product product = new Product(name, description, price, imageUrl, category, user.getFullName(), 5.0, 0, "2 Days", email);
-        product.setLocationType("National");
-        product.setSpecificLocation("India");
         product.setInStock(inStock);
 
         productService.saveProduct(product);
