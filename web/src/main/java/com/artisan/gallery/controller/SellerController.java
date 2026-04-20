@@ -4,6 +4,7 @@ import com.artisan.gallery.model.Product;
 import com.artisan.gallery.model.User;
 import com.artisan.gallery.service.ProductService;
 import com.artisan.gallery.service.UserService;
+import com.artisan.gallery.service.CloudinaryService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
