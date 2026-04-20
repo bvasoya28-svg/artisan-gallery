@@ -4,19 +4,21 @@ FROM eclipse-temurin:17-jdk-alpine
 # Set the working directory in the container
 WORKDIR /app
 
-# Copy the gradle wrapper and configuration files
+# Copy all root files (gradlew, gradle, build scripts)
 COPY gradlew .
 COPY gradle gradle
-COPY build.gradle.kts .
-COPY settings.gradle.kts .
+COPY *.kts .
+COPY *.properties .
 
-# Copy the web module files
+# Copy the modules
 COPY web web
+COPY app app
 
-# Build the application
+# Build only the web application
+RUN chmod +x gradlew
 RUN ./gradlew :web:bootJar --no-daemon
 
-# Expose the port the app runs on
+# Expose the port
 EXPOSE 8085
 
 # Run the jar file
