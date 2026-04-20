@@ -18,8 +18,9 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
+// ... keep the top part (pluginManagement)
 
 rootProject.name = "Handmade products"
-include(":app")
-include(":web")
+include(":web") // REMOVE :app so Render doesn't waste time on the Android app
+
  

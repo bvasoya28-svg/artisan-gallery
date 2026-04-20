@@ -1,24 +1,27 @@
-# Use Java 21 (matching your project's requirement)
-FROM eclipse-temurin:21-jdk-alpine
+# Use Java 17 (Matching your build.gradle)
+FROM eclipse-temurin:17-jdk-alpine
 
 # Set the working directory
 WORKDIR /app
 
-# Copy all root files
+# Copy gradle files
 COPY gradlew .
 COPY gradle gradle
-COPY *.kts .
-COPY *.properties .
+COPY build.gradle.kts .
+COPY settings.gradle.kts .
+COPY gradle.properties .
 
-# Copy the modules
+# Copy ONLY the web module (ignore the android app)
 COPY web web
-COPY app app
 
-# Build the web application
+# Fix line endings and permissions
+RUN tr -d '\r' < gradlew > gradlew_unix && mv gradlew_unix gradlew
 RUN chmod +x gradlew
+
+# Build ONLY the web module jar
 RUN ./gradlew :web:bootJar --no-daemon
 
-# Expose the port
+# Expose port 8085
 EXPOSE 8085
 
 # Run the jar file
