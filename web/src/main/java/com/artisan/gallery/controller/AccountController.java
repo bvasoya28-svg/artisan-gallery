@@ -31,6 +31,9 @@ public class AccountController {
     @Autowired
     private CloudinaryService cloudinaryService;
 
+    @Autowired
+    private OrderRepository orderRepository;
+
     @GetMapping
     public String accountHub(HttpSession session, Model model) {
         String email = (String) session.getAttribute("userEmail");
