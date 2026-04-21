@@ -49,10 +49,18 @@ public class User {
     public String getFullName() { return fullName; }
     public void setFullName(String fullName) { this.fullName = fullName; }
     public String getProfilePicture() { 
-        if (profilePicture == null || profilePicture.isEmpty() || profilePicture.equals("default-profile.png")) {
-            return "https://res.cloudinary.com/dpt2wn9lh/image/upload/v1715851234/default-avatar_rc9v7x.png";
-        }
-        return profilePicture; 
+        String img = (profilePicture == null || profilePicture.isEmpty() || profilePicture.equals("default-profile.png")) 
+            ? "v1715851234/default-avatar_rc9v7x.png" 
+            : profilePicture;
+            
+        if (img.startsWith("http")) return img;
+        
+        // Strip extension and folder names for Cloudinary mapping
+        String publicId = img.contains(".") ? img.substring(0, img.lastIndexOf('.')) : img;
+        if (publicId.startsWith("/")) publicId = publicId.substring(1);
+        if (publicId.startsWith("images/")) publicId = publicId.substring(7);
+        
+        return "https://res.cloudinary.com/dpt2wn9lh/image/upload/" + publicId;
     }
     public void setProfilePicture(String profilePicture) { this.profilePicture = profilePicture; }
     public boolean isSellerTermsAccepted() { return sellerTermsAccepted; }

@@ -16,7 +16,7 @@
 
             <div class="user-profile-header" th:if="${user != null}">
                 <span th:text="${user.fullName}">User Name</span>
-                <img th:src="${user.profilePicture != null && user.profilePicture.startsWith('http') ? user.profilePicture : (user.profilePicture != null ? 'https://res.cloudinary.com/dpt2wn9lh/image/upload/' + (user.profilePicture.contains('.') ? user.profilePicture.substring(0, user.profilePicture.lastIndexOf('.')) : user.profilePicture) : '/images/default-profile.png')}" alt="Profile">
+                <img th:src="${user.profilePicture}" alt="Profile">
             </div>
         </div>
     </header>
@@ -52,7 +52,7 @@
                 <div th:each="cat : ${ {'Paintings', 'Pottery', 'Crochet', 'Craft', 'Others'} }" class="cat-item">
                     <a th:href="@{'/category/' + ${cat}}">
                         <div class="cat-circle">
-                            <img th:src="@{'/images/' + ${cat == 'Paintings' ? 'p1.jpg' : (cat == 'Pottery' ? 'po1.jpg' : (cat == 'Crochet' ? 'cr1.jpg' : (cat == 'Craft' ? 'c1.jpg' : 'v1.jpg')))}}" th:alt="${cat}">
+                            <img th:src="${cat == 'Paintings' ? 'https://res.cloudinary.com/dpt2wn9lh/image/upload/p1' : (cat == 'Pottery' ? 'https://res.cloudinary.com/dpt2wn9lh/image/upload/po1' : (cat == 'Crochet' ? 'https://res.cloudinary.com/dpt2wn9lh/image/upload/cr1' : (cat == 'Craft' ? 'https://res.cloudinary.com/dpt2wn9lh/image/upload/c1' : 'https://res.cloudinary.com/dpt2wn9lh/image/upload/v1')))}" th:alt="${cat}">
                         </div>
                         <b th:text="${cat}">Category</b>
                     </a>
