@@ -29,7 +29,7 @@ public class AccountController {
     private ProductService productService;
 
     @Autowired
-    private OrderRepository orderRepository;
+    private CloudinaryService cloudinaryService;
 
     @GetMapping
     public String accountHub(HttpSession session, Model model) {
@@ -115,11 +115,8 @@ public class AccountController {
     public String updateProfilePic(@RequestParam("profilePic") MultipartFile file, HttpSession session) throws IOException {
         String email = (String) session.getAttribute("userEmail");
         if (file != null && !file.isEmpty()) {
-            String fileName = System.currentTimeMillis() + "_" + file.getOriginalFilename();
-            Path path = Paths.get("src/main/resources/static/images/" + fileName);
-            Files.createDirectories(path.getParent());
-            Files.write(path, file.getBytes());
-            userService.updateProfilePicture(email, fileName);
+            String imageUrl = cloudinaryService.uploadImage(file);
+            userService.updateProfilePicture(email, imageUrl);
         }
         return "redirect:/account/details?success";
     }

@@ -17,7 +17,7 @@
 
             <div class="user-profile-header" th:if="${user != null}">
                 <span th:text="${user.fullName}">User Name</span>
-                <img th:src="${user.profilePicture.startsWith('http') ? user.profilePicture : '/images/' + user.profilePicture}" alt="Profile">
+                <img th:src="${user.profilePicture}" alt="Profile">
             </div>
         </div>
     </header>

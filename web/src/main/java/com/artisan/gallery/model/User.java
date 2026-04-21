@@ -49,8 +49,8 @@ public class User {
     public String getFullName() { return fullName; }
     public void setFullName(String fullName) { this.fullName = fullName; }
     public String getProfilePicture() { 
-        String img = (profilePicture == null || profilePicture.isEmpty() || profilePicture.equals("default-profile.png")) 
-            ? "v1715851234/default-avatar_rc9v7x.png" 
+        String img = (profilePicture == null || profilePicture.isEmpty() || profilePicture.equals("default-profile.png") || profilePicture.equals("v1.jpg")) 
+            ? "https://res.cloudinary.com/dpt2wn9lh/image/upload/v1715851234/default-avatar_rc9v7x.png"
             : profilePicture;
             
         if (img.startsWith("http")) return img;
