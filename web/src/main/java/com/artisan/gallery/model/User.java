@@ -48,7 +48,12 @@ public class User {
     public void setAddress(String address) { this.address = address; }
     public String getFullName() { return fullName; }
     public void setFullName(String fullName) { this.fullName = fullName; }
-    public String getProfilePicture() { return profilePicture; }
+    public String getProfilePicture() { 
+        if (profilePicture == null || profilePicture.isEmpty() || profilePicture.equals("default-profile.png")) {
+            return "https://res.cloudinary.com/dpt2wn9lh/image/upload/v1715851234/default-avatar_rc9v7x.png";
+        }
+        return profilePicture; 
+    }
     public void setProfilePicture(String profilePicture) { this.profilePicture = profilePicture; }
     public boolean isSellerTermsAccepted() { return sellerTermsAccepted; }
     public void setSellerTermsAccepted(boolean sellerTermsAccepted) { this.sellerTermsAccepted = sellerTermsAccepted; }

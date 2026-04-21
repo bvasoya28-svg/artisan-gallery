@@ -1,9 +1,13 @@
 package com.artisan.gallery.controller;
 
+import com.artisan.gallery.model.CartItem;
 import com.artisan.gallery.model.OrderRecord;
 import com.artisan.gallery.model.Product;
+import com.artisan.gallery.model.User;
+import com.artisan.gallery.repository.CartItemRepository;
 import com.artisan.gallery.repository.OrderRepository;
 import com.artisan.gallery.service.ProductService;
+import com.artisan.gallery.service.UserService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -11,8 +15,8 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/cart")
@@ -24,54 +28,60 @@ public class CartController {
     @Autowired
     private OrderRepository orderRepository;
 
-    @SuppressWarnings("unchecked")
-    private List<Product> getCart(HttpSession session) {
-        List<Product> cart = (List<Product>) session.getAttribute("cart");
-        if (cart == null) {
-            cart = new ArrayList<>();
-            session.setAttribute("cart", cart);
-        }
-        return cart;
-    }
+    @Autowired
+    private CartItemRepository cartItemRepository;
 
     @Autowired
-    private com.artisan.gallery.service.UserService userService;
+    private UserService userService;
 
     @GetMapping
     public String viewCart(HttpSession session, Model model) {
         String userEmail = (String) session.getAttribute("userEmail");
         if (userEmail == null) return "redirect:/login";
 
-        com.artisan.gallery.model.User user = userService.getUserByEmail(userEmail);
+        User user = userService.getUserByEmail(userEmail);
         if (user == null) {
             session.invalidate();
             return "redirect:/login";
         }
 
-        List<Product> cart = getCart(session);
-        double total = cart.stream().mapToDouble(Product::getPrice).sum();
+        List<CartItem> cartItems = cartItemRepository.findByUserEmail(userEmail);
+        List<Product> products = cartItems.stream()
+                .map(CartItem::getProduct)
+                .collect(Collectors.toList());
+        
+        double total = products.stream().mapToDouble(Product::getPrice).sum();
         
         model.addAttribute("user", user);
-        model.addAttribute("cart", cart);
+        model.addAttribute("cart", products);
         model.addAttribute("total", total);
         return "cart";
     }
 
     @PostMapping("/add")
     public String addToCart(@RequestParam Long productId, HttpSession session) {
-        if (session.getAttribute("loggedIn") == null) return "redirect:/login";
+        String userEmail = (String) session.getAttribute("userEmail");
+        if (userEmail == null) return "redirect:/login";
+
         Product product = productService.getProductById(productId);
         if (product != null) {
-            getCart(session).add(product);
+            CartItem item = new CartItem(userEmail, product);
+            cartItemRepository.save(item);
         }
         return "redirect:/cart";
     }
 
     @PostMapping("/remove")
-    public String removeFromCart(@RequestParam int index, HttpSession session) {
-        List<Product> cart = getCart(session);
-        if (index >= 0 && index < cart.size()) {
-            cart.remove(index);
+    public String removeFromCart(@RequestParam Long productId, HttpSession session) {
+        String userEmail = (String) session.getAttribute("userEmail");
+        if (userEmail != null) {
+            List<CartItem> items = cartItemRepository.findByUserEmail(userEmail);
+            for (CartItem item : items) {
+                if (item.getProduct().getId().equals(productId)) {
+                    cartItemRepository.delete(item);
+                    break; // Only remove one instance
+                }
+            }
         }
         return "redirect:/cart";
     }
@@ -80,26 +90,28 @@ public class CartController {
     public String checkout(HttpSession session) {
         String userName = (String) session.getAttribute("userName");
         String userEmail = (String) session.getAttribute("userEmail");
-        List<Product> cart = getCart(session);
+        
+        List<CartItem> cartItems = cartItemRepository.findByUserEmail(userEmail);
+        if (cartItems.isEmpty()) return "redirect:/cart";
 
-        if (cart.isEmpty()) return "redirect:/cart";
-
-        for (Product item : cart) {
+        for (CartItem item : cartItems) {
+            Product product = item.getProduct();
             OrderRecord order = new OrderRecord(
                 userName, 
                 userEmail, 
-                item.getName(), 
-                item.getPrice(), 
+                product.getName(), 
+                product.getPrice(), 
                 LocalDateTime.now(), 
                 "Default Address", 
                 "COD", 
                 "PLACED", 
-                item.getImageUrl()
+                product.getImageUrl()
             );
             orderRepository.save(order);
         }
 
-        cart.clear();
+        // Only clear cart AFTER successful order
+        cartItemRepository.deleteAll(cartItems);
         return "redirect:/account/orders?success";
     }
 }

@@ -92,6 +92,12 @@ public class ProductService {
     }
 
     public void saveProduct(Product product) {
+        // Strictly enforce price between 1000 and 5000
+        if (product.getPrice() < 1000.0) {
+            product.setPrice(1000.0);
+        } else if (product.getPrice() > 5000.0) {
+            product.setPrice(5000.0);
+        }
         repository.save(product);
     }
 
