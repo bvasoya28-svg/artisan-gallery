@@ -27,11 +27,14 @@ public class ProductService {
 
     private String getCloudinaryUrl(String fileName) {
         if (fileName == null || fileName.startsWith("http")) return fileName;
-        if (cloudName == null || cloudName.isEmpty()) return "/images/" + fileName;
         
-        // Remove file extension for Cloudinary public ID if needed, 
-        // but usually Cloudinary handles it. We'll map to the version in your screenshot.
-        return "https://res.cloudinary.com/" + cloudName + "/image/upload/" + fileName;
+        // Use your cloud name directly to be 100% sure
+        String activeCloudName = (cloudName == null || cloudName.isEmpty()) ? "dpt2wn9lh" : cloudName;
+        
+        // Strip .jpg extension because your Cloudinary IDs don't have them
+        String publicId = fileName.contains(".") ? fileName.substring(0, fileName.lastIndexOf('.')) : fileName;
+        
+        return "https://res.cloudinary.com/" + activeCloudName + "/image/upload/" + publicId;
     }
 
     public List<Product> getAllProducts() {
