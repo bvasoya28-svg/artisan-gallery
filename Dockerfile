@@ -16,7 +16,7 @@ RUN chmod +x gradlew
 RUN ./gradlew :web:bootJar --no-daemon
 
 # Expose port (Render overrides this with $PORT)
-EXPOSE 10000
+EXPOSE 8085
 
 # Use the environment variable $PORT for the web server
-CMD ["sh", "-c", "java -jar web/build/libs/web-0.0.1-SNAPSHOT.jar --server.port=${PORT:-10000}"]
+ENTRYPOINT ["sh", "-c", "java -jar web/build/libs/web-0.0.1-SNAPSHOT.jar --server.port=${PORT:-8085}"]
