@@ -25,8 +25,9 @@ public class ProductService {
     @Value("${cloudinary.cloud_name:}")
     private String cloudName;
 
-    private String getCloudinaryUrl(String fileName) {
-        if (fileName == null || fileName.startsWith("http")) return fileName;
+    public String getCloudinaryUrl(String fileName) {
+        if (fileName == null || fileName.isEmpty()) return "/images/v1.jpg";
+        if (fileName.startsWith("http")) return fileName;
         
         // Use your cloud name directly to be 100% sure
         String activeCloudName = (cloudName == null || cloudName.isEmpty()) ? "dpt2wn9lh" : cloudName;
@@ -193,7 +194,7 @@ public class ProductService {
     private void addP(List<Product> list, String name, String desc, String img, String cat, String artist, double rating, boolean inStock) {
         Random r = new Random();
         Product p = new Product(
-            name, desc, (double)(500 + r.nextInt(4500)), img, cat, artist, rating, 10 + r.nextInt(50), "2-4 Days", "System"
+            name, desc, (double)(1000 + r.nextInt(4001)), img, cat, artist, rating, 10 + r.nextInt(50), "2-4 Days", "System"
         );
         p.setInStock(inStock);
         list.add(p);
