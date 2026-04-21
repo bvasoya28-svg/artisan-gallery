@@ -77,6 +77,20 @@ public class ProductController {
         return "home";
     }
 
+    @GetMapping("/category/{name}")
+    public String viewCategory(@PathVariable String name, Model model, HttpSession session) {
+        String userEmail = (String) session.getAttribute("userEmail");
+        if (userEmail == null) return "redirect:/login";
+        
+        User user = userService.getUserByEmail(userEmail);
+        if (user == null) return "redirect:/login";
+
+        model.addAttribute("user", user);
+        model.addAttribute("category", name);
+        model.addAttribute("products", productService.getProductsByCategory(name));
+        return "category";
+    }
+
     @GetMapping("/search")
     public String searchPage(@RequestParam(required = false) String query, Model model, HttpSession session) {
         String userEmail = (String) session.getAttribute("userEmail");
