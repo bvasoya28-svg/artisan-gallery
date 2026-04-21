@@ -5,6 +5,7 @@ import com.artisan.gallery.repository.ProductRepository;
 import com.artisan.gallery.repository.ReviewRepository;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,42 +22,69 @@ public class ProductService {
     @Autowired
     private ReviewRepository reviewRepository;
 
+    @Value("${cloudinary.cloud_name:}")
+    private String cloudName;
+
+    private String getCloudinaryUrl(String fileName) {
+        if (fileName == null || fileName.startsWith("http")) return fileName;
+        if (cloudName == null || cloudName.isEmpty()) return "/images/" + fileName;
+        
+        // Remove file extension for Cloudinary public ID if needed, 
+        // but usually Cloudinary handles it. We'll map to the version in your screenshot.
+        return "https://res.cloudinary.com/" + cloudName + "/image/upload/" + fileName;
+    }
+
     public List<Product> getAllProducts() {
-        return repository.findAll();
+        List<Product> products = repository.findAll();
+        products.forEach(p -> p.setImageUrl(getCloudinaryUrl(p.getImageUrl())));
+        return products;
     }
 
     public List<Product> getProductsByCategory(String category) {
+        List<Product> products;
         if ("All".equals(category) || category == null || category.isEmpty()) {
-            return repository.findAll();
+            products = repository.findAll();
+        } else {
+            products = repository.findByCategory(category);
         }
-        return repository.findByCategory(category);
+        products.forEach(p -> p.setImageUrl(getCloudinaryUrl(p.getImageUrl())));
+        return products;
     }
 
     public List<Product> getSystemProducts() {
-        return repository.findByUploader("System");
+        List<Product> products = repository.findByUploader("System");
+        products.forEach(p -> p.setImageUrl(getCloudinaryUrl(p.getImageUrl())));
+        return products;
     }
 
     public List<Product> getSharedCreations(String currentUserEmail) {
-        if (currentUserEmail == null) return repository.findByUploaderNot("System");
-        return repository.findByUploaderNotAndUploaderNot("System", currentUserEmail);
+        List<Product> products;
+        if (currentUserEmail == null) {
+            products = repository.findByUploaderNot("System");
+        } else {
+            products = repository.findByUploaderNotAndUploaderNot("System", currentUserEmail);
+        }
+        products.forEach(p -> p.setImageUrl(getCloudinaryUrl(p.getImageUrl())));
+        return products;
     }
     
     public List<Product> getUserItems(String email) {
         if (email == null) return new ArrayList<>();
-        return repository.findByUploader(email);
-    }
-
-    public long getUserUploadCount(String email) {
-        if (email == null) return 0;
-        return repository.countByUploader(email);
+        List<Product> products = repository.findByUploader(email);
+        products.forEach(p -> p.setImageUrl(getCloudinaryUrl(p.getImageUrl())));
+        return products;
     }
 
     public List<Product> searchProducts(String query) {
-        return repository.findByNameContainingIgnoreCaseOrDescriptionContainingIgnoreCaseOrCategoryContainingIgnoreCase(query, query, query);
+        List<Product> products = repository.findByNameContainingIgnoreCaseOrDescriptionContainingIgnoreCaseOrCategoryContainingIgnoreCase(query, query, query);
+        products.forEach(p -> p.setImageUrl(getCloudinaryUrl(p.getImageUrl())));
+        return products;
     }
 
     public Product getProductById(Long id) {
-        return repository.findById(id).orElse(null);
+        Product p = repository.findById(id).orElse(null);
+        if (p != null) p.setImageUrl(getCloudinaryUrl(p.getImageUrl()));
+        return p;
     }
 
     public void saveProduct(Product product) {
@@ -70,33 +98,16 @@ public class ProductService {
     }
 
     public List<Product> getSuggestions(String category, Long excludeId) {
-        return repository.findByCategory(category).stream()
+        List<Product> products = repository.findByCategory(category).stream()
                 .filter(p -> !p.getId().equals(excludeId))
                 .limit(5)
                 .toList();
+        products.forEach(p -> p.setImageUrl(getCloudinaryUrl(p.getImageUrl())));
+        return products;
     }
 
     @PostConstruct
     public void initData() {
-        // Force update existing items to have diverse ratings and stock status
-        repository.findAll().forEach(p -> {
-            // Assign specific out of stock items
-            if ("Fruit Still Life".equals(p.getName()) || 
-                "Starry Night Vase".equals(p.getName()) || 
-                "Songbird Pitcher".equals(p.getName())) {
-                p.setInStock(false);
-            } else {
-                p.setInStock(true);
-            }
-
-            // Assign diverse ratings based on index/name to make them look realistic
-            double[] ratings = {3.5, 4.0, 4.2, 4.5, 4.8, 5.0};
-            int index = Math.abs(p.getName().hashCode()) % ratings.length;
-            p.setRating(ratings[index]);
-            
-            repository.save(p);
-        });
-
         if (repository.count() > 0) return;
 
         List<Product> products = new ArrayList<>();
