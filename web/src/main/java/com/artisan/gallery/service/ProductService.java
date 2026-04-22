@@ -117,21 +117,24 @@ public class ProductService {
         Thread initThread = new Thread(() -> {
             try {
                 // Wait for the app to be fully up and the port to be open
-                Thread.sleep(10000); 
+                Thread.sleep(5000); 
                 System.out.println(">>> [STARTUP] Beginning background catalog initialization...");
+                
+                // Call performInit without its own @Transactional here to manage chunks
                 performInit();
+                
                 System.out.println(">>> [STARTUP] Background initialization complete!");
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             } catch (Exception e) {
                 System.err.println(">>> [ERROR] Background initialization failed: " + e.getMessage());
+                e.printStackTrace();
             }
         });
         initThread.setDaemon(true);
         initThread.start();
     }
 
-    @Transactional
     public void performInit() {
         System.out.println(">>> [CATALOG CHECK] Verifying system items...");
         List<Product> systemProducts = repository.findByUploader("System");
@@ -146,22 +149,27 @@ public class ProductService {
 
         System.out.println(">>> [REFRESH REQUIRED] Reason: " + (systemProducts.isEmpty() ? "No items" : "Short descriptions detected"));
         
+        // Use a single transaction for the wipe to ensure it's fast
+        cleanupAndReinit(systemProducts);
+    }
+
+    @Transactional
+    protected void cleanupAndReinit(List<Product> systemProducts) {
         // 1. Bulk Delete associated data to avoid FK constraints and timeouts
         List<Long> systemIds = systemProducts.stream().map(Product::getId).toList();
         if (!systemIds.isEmpty()) {
+            System.out.println(">>> [CLEANUP] Removing reviews and cart items for " + systemIds.size() + " products...");
             for (Long id : systemIds) {
                 reviewRepository.deleteByProductId(id);
             }
             cartItemRepository.deleteByProductIds(systemIds);
+            
+            // 2. Clear system products
+            repository.deleteByUploader("System");
+            repository.flush();
         }
-
-        cartItemRepository.flush();
-        reviewRepository.flush();
         
-        // 2. Clear system products
-        repository.deleteByUploader("System");
-        repository.flush();
-        System.out.println(">>> [CLEANUP DONE] Old catalog wiped.");
+        System.out.println(">>> [CLEANUP DONE] Old catalog wiped. Rebuilding...");
 
         List<Product> products = new ArrayList<>();
         
