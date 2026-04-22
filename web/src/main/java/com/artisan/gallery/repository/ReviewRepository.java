@@ -9,6 +9,11 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     @org.springframework.data.jpa.repository.Modifying
     @org.springframework.transaction.annotation.Transactional
     void deleteByProductId(Long productId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    @org.springframework.data.jpa.repository.Query("DELETE FROM Review r WHERE r.product.id IN :productIds")
+    void deleteByProductIds(java.util.List<Long> productIds);
     @org.springframework.data.jpa.repository.Modifying
     @org.springframework.transaction.annotation.Transactional
     void deleteByUserEmail(String userEmail);
