@@ -1,6 +1,7 @@
 package com.artisan.gallery.service;
 
 import com.artisan.gallery.model.Product;
+import com.artisan.gallery.repository.CartItemRepository;
 import com.artisan.gallery.repository.ProductRepository;
 import com.artisan.gallery.repository.ReviewRepository;
 import jakarta.annotation.PostConstruct;
@@ -21,6 +22,9 @@ public class ProductService {
 
     @Autowired
     private ReviewRepository reviewRepository;
+
+    @Autowired
+    private CartItemRepository cartItemRepository;
 
     @Value("${cloudinary.cloud_name:}")
     private String cloudName;
@@ -142,10 +146,20 @@ public class ProductService {
 
         System.out.println(">>> [REFRESH REQUIRED] Reason: " + (systemProducts.isEmpty() ? "No items" : "Short descriptions detected"));
         
-        // 1. Delete reviews for system products first to avoid FK constraints
+        // 1. Delete associated data first to avoid FK constraints (Reviews and Cart Items)
         for (Product p : systemProducts) {
             reviewRepository.deleteByProductId(p.getId());
+            // Need to handle cart items carefully as they belong to various users
+            // We'll delete any cart item pointing to this system product
+            List<com.artisan.gallery.model.CartItem> allCartItems = cartItemRepository.findAll();
+            for (com.artisan.gallery.model.CartItem item : allCartItems) {
+                if (item.getProduct() != null && item.getProduct().getId().equals(p.getId())) {
+                    cartItemRepository.delete(item);
+                }
+            }
         }
+        cartItemRepository.flush();
+        reviewRepository.flush();
         
         // 2. Clear system products
         repository.deleteByUploader("System");
