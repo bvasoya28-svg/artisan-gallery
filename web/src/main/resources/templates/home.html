@@ -52,7 +52,7 @@
                 <div th:each="cat : ${ {'Paintings', 'Pottery', 'Crochet', 'Craft', 'Others'} }" class="cat-item">
                     <a th:href="@{'/category/' + ${cat}}">
                         <div class="cat-circle">
-                            <img th:src="${cat == 'Paintings' ? 'https://res.cloudinary.com/dph6v9re2/image/upload/p1.jpg' : (cat == 'Pottery' ? 'https://res.cloudinary.com/dph6v9re2/image/upload/po1.jpg' : (cat == 'Crochet' ? 'https://res.cloudinary.com/dph6v9re2/image/upload/cr1.jpg' : (cat == 'Craft' ? 'https://res.cloudinary.com/dph6v9re2/image/upload/c1.jpg' : 'https://res.cloudinary.com/dph6v9re2/image/upload/v1.jpg')))}" th:alt="${cat}">
+                            <img th:src="${cat == 'Paintings' ? 'https://res.cloudinary.com/dph6v9re2/image/upload/p1.jpg?v=2' : (cat == 'Pottery' ? 'https://res.cloudinary.com/dph6v9re2/image/upload/po1.jpg?v=2' : (cat == 'Crochet' ? 'https://res.cloudinary.com/dph6v9re2/image/upload/cr1.jpg?v=2' : (cat == 'Craft' ? 'https://res.cloudinary.com/dph6v9re2/image/upload/c1.jpg?v=2' : 'https://res.cloudinary.com/dph6v9re2/image/upload/v1.jpg?v=2')))}" th:alt="${cat}">
                         </div>
                         <b th:text="${cat}">Category</b>
                     </a>

@@ -26,19 +26,18 @@ public class ProductService {
     private ReviewRepository reviewRepository;
 
     @Autowired
-    private ProductService self; // Self-injection to fix @Transactional self-invocation
+    private ProductService self;
 
     @org.springframework.context.event.EventListener(org.springframework.boot.context.event.ApplicationReadyEvent.class)
     public void initData() {
         Thread initThread = new Thread(() -> {
             try {
-                Thread.sleep(5000); 
-                System.out.println(">>> [STARTUP] Restoring images with EXACT mapping (p, po, cr, c, v)...");
-                self.performSafeUpdate(); // Use 'self' to ensure @Transactional works
-                System.out.println(">>> [STARTUP] All 59 items restored with full stories!");
+                Thread.sleep(10000); 
+                System.out.println(">>> [STARTUP] Syncing 59 system items to restore images...");
+                self.performSafeUpdate();
+                System.out.println(">>> [STARTUP] All items are now up to date!");
             } catch (Exception e) {
-                System.err.println(">>> [ERROR] Restore failed: " + e.getMessage());
-                e.printStackTrace();
+                System.err.println(">>> [ERROR] Refresh failed: " + e.getMessage());
             }
         });
         initThread.setDaemon(true);
@@ -47,128 +46,104 @@ public class ProductService {
 
     @Transactional
     public void performSafeUpdate() {
-        System.out.println(">>> [DEBUG] Clearing existing system products and their dependencies to force URL refresh...");
         List<Product> systemProducts = repository.findByUploader("System");
+        java.util.Map<String, Product> existingMap = systemProducts.stream()
+                .collect(Collectors.toMap(Product::getName, p -> p, (p1, p2) -> p1));
         
-        if (!systemProducts.isEmpty()) {
-            List<Long> systemIds = systemProducts.stream().map(Product::getId).collect(Collectors.toList());
-            // Clear dependencies first to avoid the Foreign Key error from your logs
-            reviewRepository.deleteByProductIds(systemIds);
-            cartItemRepository.deleteByProductIds(systemIds);
-            
-            // Now the database will allow us to delete and refresh
-            repository.deleteAllInBatch(systemProducts);
-            repository.flush();
-        }
-        
-        List<Product> toUpdate = new ArrayList<>();
+        List<Product> toSave = new ArrayList<>();
         String baseUrl = "https://res.cloudinary.com/dph6v9re2/image/upload/";
-        System.out.println(">>> [DEBUG] Using Cloudinary Base URL: " + baseUrl);
+
+        java.util.function.BiConsumer<String, String[]> updater = (name, data) -> {
+            Product p = existingMap.getOrDefault(name, new Product());
+            p.setName(name);
+            p.setDescription(data[0]);
+            p.setImageUrl(baseUrl + data[1] + ".jpg?v=2");
+            p.setCategory(data[2]);
+            p.setArtist(data[3]);
+            p.setRating(Double.parseDouble(data[4]));
+            p.setInStock(Boolean.parseBoolean(data[5]));
+            if (p.getId() == null) {
+                p.setUploader("System");
+                p.setPrice((double)(1000 + new Random().nextInt(4000)));
+                p.setReviewCount(10 + new Random().nextInt(90));
+                p.setDeliveryTime("3-5 Days");
+            }
+            toSave.add(p);
+        };
 
         // --- PAINTINGS (p1-p10) ---
-        update(toUpdate, "Fruit Still Life", "This stunning oil painting captures the vibrant essence of fresh harvest, featuring a meticulously detailed arrangement of ripe apples, velvet-skinned grapes, and a rustic wooden bowl. Ideal for a sophisticated kitchen or dining area.", baseUrl + "p1.jpg?v=2", "Paintings", "Anita Sharma", 4.8, false);
-        update(toUpdate, "The Knight's Vow", "A breathtaking romantic classical masterpiece depicting a solemn knight kneeling before a radiant princess in a medieval castle hall. A powerful focal point for any grand living room.", baseUrl + "p2.jpg?v=2", "Paintings", "Rajesh Kumar", 4.5, true);
-        update(toUpdate, "Coastal Village", "Immerse yourself in the charm of a sun-drenched Mediterranean town with this vibrant acrylic painting. Cascading houses overlook a sparkling turquoise sea.", baseUrl + "p3.jpg?v=2", "Paintings", "Siddharth Verma", 4.9, true);
-        update(toUpdate, "Golden Moonbeam", "A serene night sky featuring a large golden moon reflected on a calm sea. Perfect for a bedroom or meditation space.", baseUrl + "p4.jpg?v=2", "Paintings", "Neha Patel", 4.2, true);
-        update(toUpdate, "The Mermaid's Grace", "An ethereal underwater portrait of a mermaid in deep blue waters, exploring the mystery of the deep ocean.", baseUrl + "p5.jpg?v=2", "Paintings", "Amitabh Gupta", 4.7, false);
-        update(toUpdate, "Flamenco Soul", "A dynamic painting of a dancer in a vibrant red dress, capturing the raw passion and energy of Spanish dance.", baseUrl + "p6.jpg?v=2", "Paintings", "Priya Singh", 4.4, true);
-        update(toUpdate, "Royal Peacock", "A textured acrylic painting of a peacock with a stunning tail highlighted with metallic gold and emerald green.", baseUrl + "p7.jpg?v=2", "Paintings", "Vikram Malhotra", 4.6, true);
-        update(toUpdate, "The Forbidden Castle", "An atmospheric dark fantasy landscape featuring a mysterious gothic castle perched on a jagged cliff.", baseUrl + "p8.jpg?v=2", "Paintings", "Deepika Iyer", 4.3, true);
-        update(toUpdate, "Voyage into Unknown", "A tall ship sailing through a rocky cave opening, signifying the start of a legendary and brave journey.", baseUrl + "p9.jpg?v=2", "Paintings", "Arjun Reddy", 4.7, true);
-        update(toUpdate, "Mystic Forest", "A high-fantasy landscape capturing a glowing, bioluminescent forest at twilight with enchanted trees.", baseUrl + "p10.jpg?v=2", "Paintings", "Ishani Bose", 4.6, true);
+        updater.accept("Fruit Still Life", new String[]{"Detailed oil painting of fresh harvest.", "p1", "Paintings", "Anita Sharma", "4.8", "false"});
+        updater.accept("The Knight's Vow", new String[]{"Romantic classical masterpiece.", "p2", "Paintings", "Rajesh Kumar", "4.5", "true"});
+        updater.accept("Coastal Village", new String[]{"Mediterranean town acrylic painting.", "p3", "Paintings", "Siddharth Verma", "4.9", "true"});
+        updater.accept("Golden Moonbeam", new String[]{"Serene night sky moon painting.", "p4", "Paintings", "Neha Patel", "4.2", "true"});
+        updater.accept("The Mermaid's Grace", new String[]{"Ethereal underwater portrait.", "p5", "Paintings", "Amitabh Gupta", "4.7", "false"});
+        updater.accept("Flamenco Soul", new String[]{"Dynamic Spanish dancer painting.", "p6", "Paintings", "Priya Singh", "4.4", "true"});
+        updater.accept("Royal Peacock", new String[]{"Textured acrylic peacock art.", "p7", "Paintings", "Vikram Malhotra", "4.6", "true"});
+        updater.accept("The Forbidden Castle", new String[]{"Dark fantasy landscape.", "p8", "Paintings", "Deepika Iyer", "4.3", "true"});
+        updater.accept("Voyage into Unknown", new String[]{"Ship sailing through a cave.", "p9", "Paintings", "Arjun Reddy", "4.7", "true"});
+        updater.accept("Mystic Forest", new String[]{"Bioluminescent forest art.", "p10", "Paintings", "Ishani Bose", "4.6", "true"});
 
         // --- OTHERS (v1-v13) ---
-        update(toUpdate, "Leafy Tea Infuser", "Brew the perfect cup of loose-leaf tea with this charming sprout-shaped infuser. Made from food-grade silicone, it's a delightful gift for nature lovers.", baseUrl + "v1.jpg?v=2", "Others", "Karan Kapur", 4.7, true);
-        update(toUpdate, "English Breakfast Set", "A complete ceramic breakfast set featuring mugs, plates, and a teapot with a classic ivory glaze. Hand-thrown and fired for durability.", baseUrl + "v2.jpg?v=2", "Others", "Kaira Advani", 4.5, true);
-        update(toUpdate, "Blue Ceramic Teapot", "Artisanal teapot with a deep cobalt blue glaze and subtle earthy speckles. Ergonomic handle and drip-free spout for the perfect pour.", baseUrl + "v3.jpg?v=2", "Others", "Suresh Raina", 4.8, true);
-        update(toUpdate, "Handcrafted Spice Rack", "Three-tier spice rack made from reclaimed teak wood. Includes 12 glass jars with airtight wooden lids to preserve freshness.", baseUrl + "v4.jpg?v=2", "Others", "Manish Pandey", 4.3, true);
-        update(toUpdate, "Marble Mortar & Pestle", "Heavy-duty solid marble set for grinding herbs like a pro. Polished exterior and rough interior for perfect crushing.", baseUrl + "v5.jpg?v=2", "Others", "Hardik Pandya", 4.9, true);
-        update(toUpdate, "Bamboo Cutting Board", "Sustainable and knife-friendly board with a built-in juice groove. Large surface ideal for chopping or serving cheese.", baseUrl + "v6.jpg?v=2", "Others", "Rohit Sharma", 4.6, true);
-        update(toUpdate, "Copper Mixing Bowls", "Set of three stainless steel bowls with hammered copper exterior. Functional for baking and beautiful for serving.", baseUrl + "v7.jpg?v=2", "Others", "Virat Kohli", 4.4, true);
-        update(toUpdate, "Linen Apron", "Stylish and durable cross-back apron made from 100% natural linen. Features two deep pockets and a comfortable fit.", baseUrl + "v8.jpg?v=2", "Others", "Shubman Gill", 4.2, true);
-        update(toUpdate, "Wooden Honey Dipper", "Hand-carved olive wood dipper for mess-free drizzling. Deep grooves designed to hold honey until you're ready.", baseUrl + "v9.jpg?v=2", "Others", "KL Rahul", 4.1, true);
-        update(toUpdate, "Ceramic Egg Carton", "Reusable ceramic tray for half a dozen eggs. Adds a charming vintage touch to your kitchen organization.", baseUrl + "v10.jpg?v=2", "Others", "Rishabh Pant", 4.5, true);
-        update(toUpdate, "Glass Herb Infuser", "Elegant glass bottle with built-in strainer for infusing oils with fresh herbs and garlic. A must-have for home cooks.", baseUrl + "v11.jpg?v=2", "Others", "Jasprit Bumrah", 4.3, true);
-        update(toUpdate, "Terracotta Bread Warmer", "Engraved terracotta stone to keep bread warm throughout dinner. Simply heat in the oven and place in your basket.", baseUrl + "v12.jpg?v=2", "Others", "Mohammed Shami", 4.6, true);
-        update(toUpdate, "Woven Table Runner", "Hand-woven cotton runner with intricate patterns and fringed edges. Adds a touch of bohemian style to any table.", baseUrl + "v13.jpg?v=2", "Others", "Ravindra Jadeja", 4.4, true);
+        updater.accept("Leafy Tea Infuser", new String[]{"Silicon tea infuser.", "v1", "Others", "Karan Kapur", "4.7", "true"});
+        updater.accept("English Breakfast Set", new String[]{"Ceramic breakfast set.", "v2", "Others", "Kaira Advani", "4.5", "true"});
+        updater.accept("Blue Ceramic Teapot", new String[]{"Artisanal blue teapot.", "v3", "Others", "Suresh Raina", "4.8", "true"});
+        updater.accept("Handcrafted Spice Rack", new String[]{"Teak wood spice rack.", "v4", "Others", "Manish Pandey", "4.3", "true"});
+        updater.accept("Marble Mortar & Pestle", new String[]{"Solid marble grinding set.", "v5", "Others", "Hardik Pandya", "4.9", "true"});
+        updater.accept("Bamboo Cutting Board", new String[]{"Sustainable cutting board.", "v6", "Others", "Rohit Sharma", "4.6", "true"});
+        updater.accept("Copper Mixing Bowls", new String[]{"Hammered copper bowls.", "v7", "Others", "Virat Kohli", "4.4", "true"});
+        updater.accept("Linen Apron", new String[]{"Natural linen apron.", "v8", "Others", "Shubman Gill", "4.2", "true"});
+        updater.accept("Wooden Honey Dipper", new String[]{"Olive wood honey dipper.", "v9", "Others", "KL Rahul", "4.1", "true"});
+        updater.accept("Ceramic Egg Carton", new String[]{"Vintage ceramic egg tray.", "v10", "Others", "Rishabh Pant", "4.5", "true"});
+        updater.accept("Glass Herb Infuser", new String[]{"Glass bottle with strainer.", "v11", "Others", "Jasprit Bumrah", "4.3", "true"});
+        updater.accept("Terracotta Bread Warmer", new String[]{"Terracotta warming stone.", "v12", "Others", "Mohammed Shami", "4.6", "true"});
+        updater.accept("Woven Table Runner", new String[]{"Hand-woven cotton runner.", "v13", "Others", "Ravindra Jadeja", "4.4", "true"});
 
         // --- CRAFT (c1-c10 + v14-v19) ---
-        update(toUpdate, "Boho Macrame Wall Hanging", "Intricate macrame wall art handcrafted with 100% natural cotton. Adds a cozy, bohemian vibe to your gallery wall.", baseUrl + "c1.jpg?v=2", "Craft", "Ishaan Khatter", 4.8, true);
-        update(toUpdate, "Artisanal Scented Candle", "Hand-poured soy wax candle in a reusable ceramic jar. Lavender and sandalwood scent with a crackling wood wick.", baseUrl + "c2.jpg?v=2", "Craft", "Ananya Panday", 4.6, true);
-        update(toUpdate, "Woven Seagrass Basket", "Versatile storage solution that doubles as a stylish planter. Hand-woven by skilled artisans with reinforced handles.", baseUrl + "c3.jpg?v=2", "Craft", "Sara Ali Khan", 4.5, true);
-        update(toUpdate, "Crystal Geode Bookends", "Natural luxury for your bookshelf. Heavy amethyst geode halves with brilliant purple crystals that sparkle in the light.", baseUrl + "c4.jpg?v=2", "Craft", "Janhvi Kapoor", 4.9, true);
-        update(toUpdate, "Vintage Brass Mirror", "Classic round mirror with a hand-etched brass frame. Timeless design that adds depth and character to any room.", baseUrl + "c5.jpg?v=2", "Craft", "Kartik Aaryan", 4.4, true);
-        update(toUpdate, "Embroidered Silk Cushion", "Luxurious silk cushion cover with hand-embroidered floral motifs. Adds elegance and a pop of color to your sofa.", baseUrl + "c6.jpg?v=2", "Craft", "Ayushmann Khurrana", 4.3, true);
-        update(toUpdate, "Modern Ceramic Vase", "Minimalist matte white vase with a unique asymmetrical shape. Ideal for dried pampas grass or fresh blooms.", baseUrl + "c7.jpg?v=2", "Craft", "Ranbir Kapoor", 4.7, true);
-        update(toUpdate, "Hand-tufted Rug", "Soft and durable wool rug with a bold geometric pattern. Hand-tufted for warmth and comfort underfoot.", baseUrl + "c8.jpg?v=2", "Craft", "Alia Bhatt", 4.6, true);
-        update(toUpdate, "Sculptural Iron Lamp", "Industrial-style lamp with a hand-forged iron base and warm Edison bulb. Creates a sophisticated atmosphere.", baseUrl + "c9.jpg?v=2", "Craft", "Ranveer Singh", 4.5, true);
-        update(toUpdate, "Botanical Framed Print", "Vintage botanical illustration in a slim oak frame. Perfect for creating a nature-inspired gallery wall.", baseUrl + "c10.jpg?v=2", "Craft", "Deepika Padukone", 4.2, true);
-        update(toUpdate, "Terrarium Kit", "Create your own miniature garden. Includes geometric glass container, soil, and moss. Just add succulents!", baseUrl + "v14.jpg?v=2", "Others", "Vicky Kaushal", 4.8, true);
-        update(toUpdate, "Driftwood Wall Clock", "Rustic wall clock crafted from natural driftwood pieces. Silent movement and minimalist hands.", baseUrl + "v15.jpg?v=2", "Others", "Katrina Kaif", 4.4, true);
-        update(toUpdate, "Hand-painted Tile Coasters", "Set of four ceramic coasters with traditional motifs. Cork-backed to protect furniture from heat.", baseUrl + "v16.jpg?v=2", "Others", "Shahid Kapoor", 4.3, true);
-        update(toUpdate, "Macrame Plant Hanger", "Hand-knotted cotton rope hanger for your favorite indoor plants. Sturdy and elegant bohemian design.", baseUrl + "v17.jpg?v=2", "Others", "Shraddha Kapoor", 4.7, true);
-        update(toUpdate, "Wooden Wall Shelf", "Minimalist floating shelf made from solid oak. Perfect for displaying small decor items or books.", baseUrl + "v18.jpg?v=2", "Others", "Varun Dhawan", 4.5, true);
-        update(toUpdate, "Decorative Lantern", "Vintage-inspired metal lantern with intricate cut-outs. Creates beautiful shadow patterns when lit.", baseUrl + "v19.jpg?v=2", "Others", "Kriti Sanon", 4.6, true);
+        updater.accept("Boho Macrame Wall Hanging", new String[]{"Handcrafted macrame art.", "c1", "Craft", "Ishaan Khatter", "4.8", "true"});
+        updater.accept("Artisanal Scented Candle", new String[]{"Lavender soy wax candle.", "c2", "Craft", "Ananya Panday", "4.6", "true"});
+        updater.accept("Woven Seagrass Basket", new String[]{"Versatile storage basket.", "c3", "Craft", "Sara Ali Khan", "4.5", "true"});
+        updater.accept("Crystal Geode Bookends", new String[]{"Natural purple amethyst.", "c4", "Craft", "Janhvi Kapoor", "4.9", "true"});
+        updater.accept("Vintage Brass Mirror", new String[]{"Hand-etched brass frame.", "c5", "Craft", "Kartik Aaryan", "4.4", "true"});
+        updater.accept("Embroidered Silk Cushion", new String[]{"Silk cover with floral motifs.", "c6", "Craft", "Ayushmann Khurrana", "4.3", "true"});
+        updater.accept("Modern Ceramic Vase", new String[]{"Minimalist matte white vase.", "c7", "Craft", "Ranbir Kapoor", "4.7", "true"});
+        updater.accept("Hand-tufted Rug", new String[]{"Soft wool geometric rug.", "c8", "Craft", "Alia Bhatt", "4.6", "true"});
+        updater.accept("Sculptural Iron Lamp", new String[]{"Industrial iron base lamp.", "c9", "Craft", "Ranveer Singh", "4.5", "true"});
+        updater.accept("Botanical Framed Print", new String[]{"Vintage botanical print.", "c10", "Craft", "Deepika Padukone", "4.2", "true"});
+        updater.accept("Terrarium Kit", new String[]{"Complete mini garden kit.", "v14", "Others", "Vicky Kaushal", "4.8", "true"});
+        updater.accept("Driftwood Wall Clock", new String[]{"Rustic driftwood clock.", "v15", "Others", "Katrina Kaif", "4.4", "true"});
+        updater.accept("Hand-painted Tile Coasters", new String[]{"Set of 4 ceramic coasters.", "v16", "Others", "Shahid Kapoor", "4.3", "true"});
+        updater.accept("Macrame Plant Hanger", new String[]{"Hand-knotted plant hanger.", "v17", "Others", "Shraddha Kapoor", "4.7", "true"});
+        updater.accept("Wooden Wall Shelf", new String[]{"Floating oak wall shelf.", "v18", "Others", "Varun Dhawan", "4.5", "true"});
+        updater.accept("Decorative Lantern", new String[]{"Vintage metal lantern.", "v19", "Others", "Kriti Sanon", "4.6", "true"});
 
         // --- CROCHET (cr1-cr10) ---
-        update(toUpdate, "Silver Moonstone Ring", "Delicate sterling silver ring with an iridescent moonstone. Glows with a mysterious blue light. A perfect statement piece.", baseUrl + "cr1.jpg?v=2", "Crochet", "Sonam Kapoor", 4.9, true);
-        update(toUpdate, "Gold Filigree Earrings", "Intricate 18k gold-plated earrings inspired by traditional motifs. Lightweight and regal for any outfit.", baseUrl + "cr2.jpg?v=2", "Crochet", "Kareena Kapoor", 4.7, true);
-        update(toUpdate, "Pearl Pendant Necklace", "Classic necklace with a genuine freshwater pearl on a fine 14k gold chain. Symbolizes purity and grace.", baseUrl + "cr3.jpg?v=2", "Crochet", "Priyanka Chopra", 4.8, true);
-        update(toUpdate, "Beaded Boho Bracelet", "Colorful multi-strand bracelet made with tiny glass seed beads. Features a secure magnetic clasp for easy wear.", baseUrl + "cr4.jpg?v=2", "Crochet", "Shraddha Kapoor", 4.4, true);
-        update(toUpdate, "Hammered Copper Cuff", "Bold and rustic cuff made from pure hammered copper. Develops a beautiful natural patina over time.", baseUrl + "cr5.jpg?v=2", "Crochet", "Tiger Shroff", 4.3, true);
-        update(toUpdate, "Emerald Stud Earrings", "Vibrant green emeralds set in minimalist 925 sterling silver studs. A touch of luxury for everyday wear.", baseUrl + "cr6.jpg?v=2", "Crochet", "Varun Dhawan", 4.6, true);
-        update(toUpdate, "Turquoise Statement Necklace", "Chunky necklace with large turquoise stones and silver accents. Brings a Southwestern flair to any look.", baseUrl + "cr7.jpg?v=2", "Crochet", "Sidharth Malhotra", 4.5, true);
-        update(toUpdate, "Amethyst Drop Earrings", "Teardrop amethyst stones on delicate silver wires. Said to promote calm and clarity for the wearer.", baseUrl + "cr8.jpg?v=2", "Crochet", "Kiara Advani", 4.7, true);
-        update(toUpdate, "Rose Gold Initial Ring", "Personalized ring with a dainty initial on a thin rose gold band. A thoughtful and stylish gift.", baseUrl + "cr9.jpg?v=2", "Crochet", "Kriti Sanon", 4.2, true);
-        update(toUpdate, "Leather Braided Bracelet", "Rugged masculine bracelet made from high-quality leather with a stainless steel anchor clasp.", baseUrl + "cr10.jpg?v=2", "Crochet", "Hrithik Roshan", 4.5, true);
+        updater.accept("Silver Moonstone Ring", new String[]{"Sterling silver moonstone ring.", "cr1", "Crochet", "Sonam Kapoor", "4.9", "true"});
+        updater.accept("Gold Filigree Earrings", new String[]{"18k gold-plated earrings.", "cr2", "Crochet", "Kareena Kapoor", "4.7", "true"});
+        updater.accept("Pearl Pendant Necklace", new String[]{"Classic freshwater pearl.", "cr3", "Crochet", "Priyanka Chopra", "4.8", "true"});
+        updater.accept("Beaded Boho Bracelet", new String[]{"Multi-strand bead bracelet.", "cr4", "Crochet", "Shraddha Kapoor", "4.4", "true"});
+        updater.accept("Hammered Copper Cuff", new String[]{"Pure hammered copper cuff.", "cr5", "Crochet", "Tiger Shroff", "4.3", "true"});
+        updater.accept("Emerald Stud Earrings", new String[]{"Green emerald silver studs.", "cr6", "Crochet", "Varun Dhawan", "4.6", "true"});
+        updater.accept("Turquoise Statement Necklace", new String[]{"Chunky turquoise necklace.", "cr7", "Crochet", "Sidharth Malhotra", "4.5", "true"});
+        updater.accept("Amethyst Drop Earrings", new String[]{"Teardrop amethyst wires.", "cr8", "Crochet", "Kiara Advani", "4.7", "true"});
+        updater.accept("Rose Gold Initial Ring", new String[]{"Dainty initial ring.", "cr9", "Crochet", "Kriti Sanon", "4.2", "true"});
+        updater.accept("Leather Braided Bracelet", new String[]{"Leather anchor bracelet.", "cr10", "Crochet", "Hrithik Roshan", "4.5", "true"});
 
         // --- POTTERY (po1-po10) ---
-        update(toUpdate, "Hand-thrown Coffee Mug", "Large earthy mug hand-thrown on a potter's wheel. Unique speckled glaze and wide handle for a comfy grip.", baseUrl + "po1.jpg?v=2", "Pottery", "Rajkumar Rao", 4.7, true);
-        update(toUpdate, "Speckled Serving Bowl", "Large shallow bowl perfect for salads. Cream glaze with dark iron spots for a rustic-modern feel.", baseUrl + "po2.jpg?v=2", "Pottery", "Ayushmann Khurrana", 4.6, true);
-        update(toUpdate, "Mini Succulent Planters", "Set of three tiny ceramic pots with drainage holes. Ideal for small succulents on a sunny windowsill.", baseUrl + "po3.jpg?v=2", "Pottery", "Pankaj Tripathi", 4.5, true);
-        update(toUpdate, "Ribbed Clay Vase", "Tall slender vase with a distinctive ribbed texture. Natural terracotta color complements any flowers.", baseUrl + "po4.jpg?v=2", "Pottery", "Nawazuddin Siddiqui", 4.4, true);
-        update(toUpdate, "Glazed Incense Holder", "Minimalist teardrop shape that catches all ash. Hand-dipped in a calming celadon green glaze.", baseUrl + "po5.jpg?v=2", "Pottery", "Manoj Bajpayee", 4.8, true);
-        update(toUpdate, "Geometric Fruit Bowl", "Striking faceted design that adds a modern architectural touch to your kitchen island.", baseUrl + "po6.jpg?v=2", "Pottery", "Vijay Varma", 4.3, true);
-        update(toUpdate, "Blue Ceramic Teacup", "Elegant teacup inspired by Japanese tea ceremonies. Smooth glaze feels wonderful in your hands.", baseUrl + "po7.jpg?v=2", "Pottery", "Siddhant Chaturvedi", 4.5, true);
-        update(toUpdate, "Textured Wall Planter", "Save space with this flat-backed ceramic planter. Rough sandy texture contrasts beautifully with green leaves.", baseUrl + "po8.jpg?v=2", "Pottery", "Vikrant Massey", 4.2, true);
-        update(toUpdate, "Rustic Pitcher", "Hand-formed pitcher with wide spout and sturdy handle. Perfect for serving cold drinks in summer.", baseUrl + "po9.jpg?v=2", "Pottery", "Jaideep Ahlawat", 4.6, true);
-        update(toUpdate, "Hand-painted Plate Set", "Set of four dessert plates with different botanical motifs. A delightful way to end any meal.", baseUrl + "po10.jpg?v=2", "Pottery", "Pratik Gandhi", 4.4, true);
-        
-        saveBatch(toUpdate);
+        updater.accept("Hand-thrown Coffee Mug", new String[]{"Speckled wheel-thrown mug.", "po1", "Pottery", "Rajkumar Rao", "4.7", "true"});
+        updater.accept("Speckled Serving Bowl", new String[]{"Rustic salad bowl.", "po2", "Pottery", "Ayushmann Khurrana", "4.6", "true"});
+        updater.accept("Mini Succulent Planters", new String[]{"Set of 3 tiny ceramic pots.", "po3", "Pottery", "Pankaj Tripathi", "4.5", "true"});
+        updater.accept("Ribbed Clay Vase", new String[]{"Tall ribbed clay vase.", "po4", "Pottery", "Nawazuddin Siddiqui", "4.4", "true"});
+        updater.accept("Glazed Incense Holder", new String[]{"Celadon green incense holder.", "po5", "Pottery", "Manoj Bajpayee", "4.8", "true"});
+        updater.accept("Geometric Fruit Bowl", new String[]{"Modern faceted design.", "po6", "Pottery", "Vijay Varma", "4.3", "true"});
+        updater.accept("Blue Ceramic Teacup", new String[]{"Japanese style teacup.", "po7", "Pottery", "Siddhant Chaturvedi", "4.5", "true"});
+        updater.accept("Textured Wall Planter", new String[]{"Flat-backed clay planter.", "po8", "Pottery", "Vikrant Massey", "4.2", "true"});
+        updater.accept("Rustic Pitcher", new String[]{"Hand-formed water pitcher.", "po9", "Pottery", "Jaideep Ahlawat", "4.6", "true"});
+        updater.accept("Hand-painted Plate Set", new String[]{"Set of 4 dessert plates.", "po10", "Pottery", "Pratik Gandhi", "4.4", "true"});
+
+        repository.saveAll(toSave);
+        repository.flush();
     }
 
-    private void update(List<Product> toSave, String name, String desc, String img, String cat, String art, Double rate, boolean stock) {
-        Product p = new Product();
-        p.setName(name);
-        p.setDescription(desc);
-        
-        // Ensure the URL is clean and direct
-        String cleanImg = img;
-        if (cleanImg != null && cleanImg.contains("cloudinary.com")) {
-            // If it's already a full cloudinary URL, use it
-            p.setImageUrl(cleanImg);
-        } else {
-            // Fallback for relative paths just in case
-            p.setImageUrl("https://res.cloudinary.com/dph6v9re2/image/upload/" + img);
-        }
-
-        p.setCategory(cat);
-        p.setArtist(art);
-        p.setRating(rate);
-        p.setPrice((double)(1000 + new Random().nextInt(4000)));
-        p.setUploader("System");
-        p.setInStock(stock);
-        p.setReviewCount(10 + new Random().nextInt(90));
-        p.setDeliveryTime("3-5 Days");
-        toSave.add(p);
-    }
-
-    @Transactional
-    protected void saveBatch(List<Product> products) {
-        repository.saveAll(products);
-    }
-
-    // --- Controller Support Methods ---
     public List<Product> getAllProducts() { return repository.findAll(); }
     public Product getProductById(Long id) { return repository.findById(id).orElse(null); }
     public List<Product> getProductsByCategory(String category) { return repository.findByCategory(category); }
