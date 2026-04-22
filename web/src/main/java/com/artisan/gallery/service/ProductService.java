@@ -107,28 +107,32 @@ public class ProductService {
         return products;
     }
 
+    @org.springframework.context.event.EventListener(org.springframework.boot.context.event.ApplicationReadyEvent.class)
     @Transactional
     public void initData() {
-        // Total should be around 59 system items now
-        if (repository.countByUploader("System") >= 55) {
-            // Check if they have long descriptions
-            boolean hasShortDescriptions = repository.findAll().stream()
-                .filter(p -> p.getUploader().equals("System"))
-                .anyMatch(p -> p.getDescription().length() < 150);
-            
-            if (!hasShortDescriptions) {
-                // Force fix prices even if we have enough items
-                repository.findAll().stream()
-                    .filter(p -> p.getUploader().equals("System") && p.getPrice() < 1000.0)
-                    .forEach(p -> {
-                        p.setPrice(1000.0 + new Random().nextInt(500));
-                        repository.save(p);
-                    });
-                return;
-            }
+        System.out.println(">>> [CATALOG CHECK] Verifying system items...");
+        List<Product> systemProducts = repository.findByUploader("System");
+        
+        boolean hasShortDescriptions = systemProducts.stream()
+                .anyMatch(p -> p.getDescription() == null || p.getDescription().length() < 150);
+
+        if (!systemProducts.isEmpty() && !hasShortDescriptions && systemProducts.size() >= 55) {
+            System.out.println(">>> [CATALOG OK] 59 items found with long descriptions. Skipping refresh.");
+            return;
         }
 
+        System.out.println(">>> [REFRESH REQUIRED] Reason: " + (systemProducts.isEmpty() ? "No items" : "Short descriptions detected"));
+        
+        // 1. Delete reviews for system products first to avoid FK constraints
+        for (Product p : systemProducts) {
+            reviewRepository.deleteByProductId(p.getId());
+        }
+        
+        // 2. Clear system products
         repository.deleteByUploader("System");
+        repository.flush();
+        System.out.println(">>> [CLEANUP DONE] Old catalog wiped.");
+
         List<Product> products = new ArrayList<>();
         
         // --- PAINTINGS (p1-p10) ---
