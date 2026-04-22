@@ -54,13 +54,13 @@ public class ProductService {
                 .collect(Collectors.toMap(Product::getName, p -> p, (p1, p2) -> p1));
         
         List<Product> toSave = new ArrayList<>();
-        String baseUrl = "/images/";
+        String baseUrl = "https://res.cloudinary.com/dpt2wn9lh/image/upload/";
 
         java.util.function.BiConsumer<String, String[]> updater = (name, data) -> {
             Product p = existingMap.getOrDefault(name, new Product());
             p.setName(name);
             p.setDescription(data[0]);
-            p.setImageUrl(baseUrl + data[1] + ".jpg");
+            p.setImageUrl(baseUrl + data[1] + ".jpg?v=2");
             p.setCategory(data[2]);
             p.setArtist(data[3]);
             p.setRating(Double.parseDouble(data[4]));

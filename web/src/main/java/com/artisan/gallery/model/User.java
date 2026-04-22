@@ -50,7 +50,7 @@ public class User {
     public void setFullName(String fullName) { this.fullName = fullName; }
     public String getProfilePicture() { 
         String img = (profilePicture == null || profilePicture.isEmpty() || profilePicture.equals("default-profile.png") || profilePicture.equals("v1.jpg")) 
-            ? "https://res.cloudinary.com/dph6v9re2/image/upload/v1735111111/default-avatar_rc9v7x.png"
+            ? "https://res.cloudinary.com/dpt2wn9lh/image/upload/v1735111111/default-avatar_rc9v7x.png"
             : profilePicture;
             
         if (img.startsWith("http")) return img;
@@ -60,7 +60,7 @@ public class User {
         if (publicId.startsWith("/")) publicId = publicId.substring(1);
         if (publicId.startsWith("images/")) publicId = publicId.substring(7);
         
-        return "https://res.cloudinary.com/dph6v9re2/image/upload/" + publicId;
+        return "https://res.cloudinary.com/dpt2wn9lh/image/upload/" + publicId;
     }
     public void setProfilePicture(String profilePicture) { this.profilePicture = profilePicture; }
     public boolean isSellerTermsAccepted() { return sellerTermsAccepted; }
