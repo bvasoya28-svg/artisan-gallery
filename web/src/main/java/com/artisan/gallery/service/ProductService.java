@@ -45,7 +45,7 @@ public class ProductService {
         List<Product> existing = repository.findByUploader("System");
         List<Product> toUpdate = new ArrayList<>();
         
-        String baseUrl = "https://res.cloudinary.com/dph6v9re2/image/upload/v1735111111/artisan/";
+        String baseUrl = "https://res.cloudinary.com/dph6v9re2/image/upload/";
 
         // --- PAINTINGS (p1-p10) ---
         update(toUpdate, existing, "Fruit Still Life", "This stunning oil painting captures the vibrant essence of fresh harvest, featuring a meticulously detailed arrangement of ripe apples, velvet-skinned grapes, and a rustic wooden bowl. Ideal for a sophisticated kitchen or dining area.", baseUrl + "p1.jpg", "Paintings", "Anita Sharma", 4.8);
