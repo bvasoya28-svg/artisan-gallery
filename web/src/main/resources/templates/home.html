@@ -142,7 +142,7 @@
 
                     <a th:href="@{/product/{id}(id=${product.id})}" style="text-decoration: none; color: inherit;">
                         <div class="product-image-container">
-                            <img th:src="${product.imageUrl.startsWith('http') ? product.imageUrl : '/images/' + product.imageUrl}" th:alt="${product.name}" th:style="${!product.inStock ? 'filter: grayscale(0.8) opacity(0.7);' : ''}">
+                            <img th:src="${product.imageUrl}" th:alt="${product.name}" th:style="${!product.inStock ? 'filter: grayscale(0.8) opacity(0.7);' : ''}">
                         </div>
                         <h3 th:text="${product.name}">Product Name</h3>
                         <p class="seller">by [[${product.artist}]]</p>
