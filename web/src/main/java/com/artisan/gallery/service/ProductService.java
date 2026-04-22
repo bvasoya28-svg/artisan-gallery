@@ -48,6 +48,7 @@ public class ProductService {
         
         List<Product> toUpdate = new ArrayList<>();
         String baseUrl = "https://res.cloudinary.com/dph6v9re2/image/upload/";
+        System.out.println(">>> [DEBUG] Using Cloudinary Base URL: " + baseUrl);
 
         // --- PAINTINGS (p1-p10) ---
         update(toUpdate, "Fruit Still Life", "This stunning oil painting captures the vibrant essence of fresh harvest, featuring a meticulously detailed arrangement of ripe apples, velvet-skinned grapes, and a rustic wooden bowl. Ideal for a sophisticated kitchen or dining area.", baseUrl + "p1.jpg", "Paintings", "Anita Sharma", 4.8);
@@ -132,6 +133,8 @@ public class ProductService {
         p.setPrice((double)(1000 + new Random().nextInt(4000)));
         p.setUploader("System");
         p.setInStock(true);
+        p.setReviewCount(10 + new Random().nextInt(90));
+        p.setDeliveryTime("3-5 Days");
         toSave.add(p);
     }
 
