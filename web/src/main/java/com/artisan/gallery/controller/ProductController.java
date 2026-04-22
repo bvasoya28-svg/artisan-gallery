@@ -185,4 +185,15 @@ public class ProductController {
         }
         return "redirect:/sell/upload";
     }
+
+    @PostMapping("/product/review/delete")
+    public String deleteReview(@RequestParam Long reviewId, @RequestParam Long productId, HttpSession session) {
+        String userEmail = (String) session.getAttribute("userEmail");
+        reviewRepository.findById(reviewId).ifPresent(review -> {
+            if (review.getUserEmail().equals(userEmail)) {
+                reviewRepository.delete(review);
+            }
+        });
+        return "redirect:/product/" + productId;
+    }
 }

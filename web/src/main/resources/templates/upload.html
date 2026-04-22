@@ -14,6 +14,21 @@
             };
             reader.readAsDataURL(event.target.files[0]);
         }
+
+        function toggleLocationFields() {
+            const locationType = document.querySelector('input[name="locationType"]:checked').value;
+            const areaContainer = document.getElementById('area-container');
+            const areaInput = document.getElementById('specificLocation');
+
+            if (locationType === 'Local') {
+                areaContainer.style.display = 'block';
+                areaInput.required = true;
+            } else {
+                areaContainer.style.display = 'none';
+                areaInput.required = false;
+                areaInput.value = 'India';
+            }
+        }
     </script>
 </head>
 <body>
@@ -102,6 +117,76 @@
                             <option value="Craft">Craft</option>
                             <option value="Others">Others</option>
                         </select>
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 10px; font-weight: bold;">Sell Where?</label>
+                        <div style="display: flex; gap: 20px; align-items: center; padding: 10px 0;">
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="radio" name="locationType" value="National" checked onchange="toggleLocationFields()">
+                                <span>Nationally (Across India)</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                                <input type="radio" name="locationType" value="Local" onchange="toggleLocationFields()">
+                                <span>Locally (Specific Area/State)</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="area-container" style="margin-bottom: 20px; display: none;">
+                        <label style="display: block; margin-bottom: 10px; font-weight: bold;">Specify Area or State (India)</label>
+                        <input type="text" id="specificLocation" name="specificLocation" list="india-locations" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd;" placeholder="e.g. Gujarat, Mumbai, Ahmedabad...">
+                        <datalist id="india-locations">
+                            <!-- States -->
+                            <option value="Andhra Pradesh">
+                            <option value="Arunachal Pradesh">
+                            <option value="Assam">
+                            <option value="Bihar">
+                            <option value="Chhattisgarh">
+                            <option value="Goa">
+                            <option value="Gujarat">
+                            <option value="Haryana">
+                            <option value="Himachal Pradesh">
+                            <option value="Jharkhand">
+                            <option value="Karnataka">
+                            <option value="Kerala">
+                            <option value="Madhya Pradesh">
+                            <option value="Maharashtra">
+                            <option value="Manipur">
+                            <option value="Meghalaya">
+                            <option value="Mizoram">
+                            <option value="Nagaland">
+                            <option value="Odisha">
+                            <option value="Punjab">
+                            <option value="Rajasthan">
+                            <option value="Sikkim">
+                            <option value="Tamil Nadu">
+                            <option value="Telangana">
+                            <option value="Tripura">
+                            <option value="Uttar Pradesh">
+                            <option value="Uttarakhand">
+                            <option value="West Bengal">
+                            <!-- Major Cities/Areas -->
+                            <option value="Ahmedabad">
+                            <option value="Surat">
+                            <option value="Vadodara">
+                            <option value="Rajkot">
+                            <option value="Mumbai">
+                            <option value="Pune">
+                            <option value="Nagpur">
+                            <option value="Bangalore">
+                            <option value="Chennai">
+                            <option value="Delhi">
+                            <option value="Hyderabad">
+                            <option value="Kolkata">
+                            <option value="Jaipur">
+                            <option value="Lucknow">
+                            <option value="Indore">
+                            <option value="Thane">
+                            <option value="Bhopal">
+                            <option value="Visakhapatnam">
+                            <option value="Patna">
+                        </datalist>
                     </div>
 
                     <div style="margin-bottom: 30px;">

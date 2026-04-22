@@ -75,6 +75,8 @@ public class SellerController {
     public String handleUpload(@RequestParam String name, @RequestParam String category,
                                @RequestParam String description, @RequestParam Double price,
                                @RequestParam(defaultValue = "true") boolean inStock,
+                               @RequestParam(defaultValue = "National") String locationType,
+                               @RequestParam(defaultValue = "India") String specificLocation,
                                @RequestParam("image") MultipartFile file,
                                HttpSession session, Model model) throws IOException {
         
@@ -101,6 +103,8 @@ public class SellerController {
 
         Product product = new Product(name, description, price, imageUrl, category, user.getFullName(), 5.0, 0, "2 Days", email);
         product.setInStock(inStock);
+        product.setLocationType(locationType);
+        product.setSpecificLocation(specificLocation);
 
         productService.saveProduct(product);
 

@@ -60,47 +60,12 @@
             </div>
         </section>
 
-        <!-- Your Items (User Uploads) -->
-        <div th:if="${not #lists.isEmpty(myItems)}">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h2 class="serif-font" style="color: var(--forest-green); margin: 0;">Your Items</h2>
-                <a th:href="@{/sell/upload}" class="nav-link" style="font-size: 1rem;">Manage Dashboard <i class="fas fa-cog"></i></a>
-            </div>
-            <div class="product-grid">
-                <div th:each="product : ${myItems}" class="product-card" style="position: relative;">
-                    <!-- Stock Status Badge -->
-                    <div style="position: absolute; top: 10px; right: 10px; z-index: 2;">
-                        <span th:if="${product.inStock}" style="background: #2d5a27; color: white; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
-                            IN STOCK
-                        </span>
-                        <span th:if="${!product.inStock}" style="background: #d63031; color: white; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
-                            OUT OF STOCK
-                        </span>
-                    </div>
-
-                    <a th:href="@{/product/{id}(id=${product.id})}" style="text-decoration: none; color: inherit;">
-                        <div class="product-image-container">
-                            <img th:src="${product.imageUrl.startsWith('http') ? product.imageUrl : '/images/' + product.imageUrl}" th:alt="${product.name}" th:style="${!product.inStock ? 'filter: grayscale(0.8) opacity(0.7);' : ''}">
-                        </div>
-                        <h3 th:text="${product.name}">Product Name</h3>
-                        <p class="seller">by [[${product.artist}]]</p>
-                        <div class="price-rating">
-                            <span class="price">₹[[${#numbers.formatDecimal(product.price, 0, 'COMMA', 2, 'POINT')}]]</span>
-                            <span class="rating">
-                                <i class="fas fa-star" th:each="i : ${#numbers.sequence(1, 5)}" th:style="${i <= (product.rating != null ? product.rating : 5) ? 'color: var(--tan)' : 'color: #ddd'}"></i>
-                            </span>
-                        </div>
-                    </a>
-                </div>
-            </div>
-        </div>
-
-        <!-- Masterpiece Collections from Other Artisans -->
+        <!-- Shared Creations from Other Artisans (Not seen by the uploader) -->
         <div th:if="${not #lists.isEmpty(sharedCreations)}">
             <h2 class="serif-font" style="color: var(--forest-green); margin-bottom: 20px;">Artisan Spotlight</h2>
             <div class="product-grid">
                 <div th:each="product : ${sharedCreations}" class="product-card" style="position: relative;">
-                    <!-- Stock Status Badge for Others -->
+                    <!-- Stock Status Badge -->
                     <div style="position: absolute; top: 10px; right: 10px; z-index: 2;">
                         <span th:if="${product.inStock}" style="background: #2d5a27; color: white; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
                             IN STOCK
@@ -154,6 +119,41 @@
                         </span>
                     </div>
                 </a>
+            </div>
+        </div>
+
+        <!-- Your Items (User Uploads) - ONLY visible to you -->
+        <div th:if="${not #lists.isEmpty(myItems)}" style="margin-top: 60px; padding-top: 40px; border-top: 2px dashed #ddd;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 class="serif-font" style="color: var(--forest-green); margin: 0;">Your Items</h2>
+                <a th:href="@{/sell/upload}" class="nav-link" style="font-size: 1rem;">Manage Dashboard <i class="fas fa-cog"></i></a>
+            </div>
+            <div class="product-grid">
+                <div th:each="product : ${myItems}" class="product-card" style="position: relative;">
+                    <!-- Stock Status Badge -->
+                    <div style="position: absolute; top: 10px; right: 10px; z-index: 2;">
+                        <span th:if="${product.inStock}" style="background: #2d5a27; color: white; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+                            IN STOCK
+                        </span>
+                        <span th:if="${!product.inStock}" style="background: #d63031; color: white; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+                            OUT OF STOCK
+                        </span>
+                    </div>
+
+                    <a th:href="@{/product/{id}(id=${product.id})}" style="text-decoration: none; color: inherit;">
+                        <div class="product-image-container">
+                            <img th:src="${product.imageUrl.startsWith('http') ? product.imageUrl : '/images/' + product.imageUrl}" th:alt="${product.name}" th:style="${!product.inStock ? 'filter: grayscale(0.8) opacity(0.7);' : ''}">
+                        </div>
+                        <h3 th:text="${product.name}">Product Name</h3>
+                        <p class="seller">by [[${product.artist}]]</p>
+                        <div class="price-rating">
+                            <span class="price">₹[[${#numbers.formatDecimal(product.price, 0, 'COMMA', 2, 'POINT')}]]</span>
+                            <span class="rating">
+                                <i class="fas fa-star" th:each="i : ${#numbers.sequence(1, 5)}" th:style="${i <= (product.rating != null ? product.rating : 5) ? 'color: var(--tan)' : 'color: #ddd'}"></i>
+                            </span>
+                        </div>
+                    </a>
+                </div>
             </div>
         </div>
     </div>

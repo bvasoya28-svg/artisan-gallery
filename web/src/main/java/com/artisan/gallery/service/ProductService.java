@@ -110,8 +110,17 @@ public class ProductService {
     @PostConstruct
     @Transactional
     public void initData() {
-        // Total should be around 59 system items now
-        if (repository.countByUploader("System") >= 55) {
+        // Check if we have enough system items AND if they have long descriptions
+        long systemCount = repository.countByUploader("System");
+        boolean hasShortDescriptions = false;
+        
+        if (systemCount >= 55) {
+            hasShortDescriptions = repository.findAll().stream()
+                .filter(p -> p.getUploader().equals("System"))
+                .anyMatch(p -> p.getDescription().length() < 150);
+        }
+
+        if (systemCount >= 55 && !hasShortDescriptions) {
             // Force fix prices even if we have enough items
             repository.findAll().stream()
                 .filter(p -> p.getUploader().equals("System") && p.getPrice() < 1000.0)
@@ -122,6 +131,7 @@ public class ProductService {
             return;
         }
 
+        // If we reach here, we either don't have enough items OR they have old short descriptions
         repository.deleteByUploader("System");
         List<Product> products = new ArrayList<>();
         

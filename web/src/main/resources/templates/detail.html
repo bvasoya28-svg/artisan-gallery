@@ -67,7 +67,15 @@
             <!-- 40% Info Column -->
             <div style="flex: 0 0 40%;">
                 <h1 class="serif-font" style="font-size: 3rem; margin: 0 0 10px 0; color: var(--text-color);" th:text="${product.name}"></h1>
-                <p style="color: var(--tan); font-size: 1.3rem; font-weight: 600; margin-bottom: 20px;" th:text="'by ' + ${product.artist}"></p>
+                <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+                    <p style="color: var(--tan); font-size: 1.3rem; font-weight: 600; margin: 0;" th:text="'by ' + ${product.artist}"></p>
+                    <span th:if="${product.locationType == 'Local'}" style="background: #fff3e0; color: #e65100; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; border: 1px solid #ffe0b2;">
+                        <i class="fas fa-map-marker-alt"></i> Ships from [[${product.specificLocation}]]
+                    </span>
+                    <span th:if="${product.locationType == 'National'}" style="background: #e3f2fd; color: #1565c0; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; border: 1px solid #bbdefb;">
+                        <i class="fas fa-globe"></i> Ships Nationwide (India)
+                    </span>
+                </div>
 
                 <div style="font-size: 2.5rem; color: var(--forest-green); font-weight: bold; margin-bottom: 30px;">
                     ₹[[${#numbers.formatDecimal(product.price, 0, 'COMMA', 2, 'POINT')}]]
