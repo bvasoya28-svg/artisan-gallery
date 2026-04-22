@@ -107,7 +107,7 @@ public class ProductService {
         return products;
     }
 
-    @PostConstruct
+    @Transactional
     public void initData() {
         // Total should be around 59 system items now
         if (repository.countByUploader("System") >= 55) {
@@ -128,11 +128,6 @@ public class ProductService {
             }
         }
 
-        performFullInit();
-    }
-
-    @Transactional
-    public void performFullInit() {
         repository.deleteByUploader("System");
         List<Product> products = new ArrayList<>();
         

@@ -11,5 +11,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Product> findByUploaderNotAndUploaderNot(String u1, String u2);
     List<Product> findByNameContainingIgnoreCaseOrDescriptionContainingIgnoreCaseOrCategoryContainingIgnoreCase(String name, String description, String category);
     long countByUploader(String uploader);
+    
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
     void deleteByUploader(String uploader);
 }
