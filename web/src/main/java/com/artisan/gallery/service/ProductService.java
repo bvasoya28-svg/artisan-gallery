@@ -60,7 +60,7 @@ public class ProductService {
             Product p = existingMap.getOrDefault(name, new Product());
             p.setName(name);
             p.setDescription(data[0]);
-            p.setImageUrl(baseUrl + data[1] + ".jpg?v=2");
+            p.setImageUrl(baseUrl + data[1]);
             p.setCategory(data[2]);
             p.setArtist(data[3]);
             p.setRating(Double.parseDouble(data[4]));
