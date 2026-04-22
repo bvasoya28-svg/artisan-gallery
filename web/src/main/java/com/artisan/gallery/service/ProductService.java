@@ -109,14 +109,22 @@ public class ProductService {
 
     @org.springframework.context.event.EventListener(org.springframework.boot.context.event.ApplicationReadyEvent.class)
     public void initData() {
-        try {
-            System.out.println(">>> [STARTUP] Beginning catalog initialization...");
-            performInit();
-            System.out.println(">>> [STARTUP] Initialization complete!");
-        } catch (Exception e) {
-            System.err.println(">>> [ERROR] Critical failure during catalog initialization: " + e.getMessage());
-            e.printStackTrace();
-        }
+        // Run in a new thread so the app opens its port immediately and doesn't timeout on Render
+        Thread initThread = new Thread(() -> {
+            try {
+                // Wait for the app to be fully up and the port to be open
+                Thread.sleep(10000); 
+                System.out.println(">>> [STARTUP] Beginning background catalog initialization...");
+                performInit();
+                System.out.println(">>> [STARTUP] Background initialization complete!");
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            } catch (Exception e) {
+                System.err.println(">>> [ERROR] Background initialization failed: " + e.getMessage());
+            }
+        });
+        initThread.setDaemon(true);
+        initThread.start();
     }
 
     @Transactional
