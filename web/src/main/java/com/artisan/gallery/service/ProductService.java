@@ -108,30 +108,31 @@ public class ProductService {
     }
 
     @PostConstruct
-    @Transactional
     public void initData() {
-        // Check if we have enough system items AND if they have long descriptions
-        long systemCount = repository.countByUploader("System");
-        boolean hasShortDescriptions = false;
-        
-        if (systemCount >= 55) {
-            hasShortDescriptions = repository.findAll().stream()
+        // Total should be around 59 system items now
+        if (repository.countByUploader("System") >= 55) {
+            // Check if they have long descriptions
+            boolean hasShortDescriptions = repository.findAll().stream()
                 .filter(p -> p.getUploader().equals("System"))
                 .anyMatch(p -> p.getDescription().length() < 150);
+            
+            if (!hasShortDescriptions) {
+                // Force fix prices even if we have enough items
+                repository.findAll().stream()
+                    .filter(p -> p.getUploader().equals("System") && p.getPrice() < 1000.0)
+                    .forEach(p -> {
+                        p.setPrice(1000.0 + new Random().nextInt(500));
+                        repository.save(p);
+                    });
+                return;
+            }
         }
 
-        if (systemCount >= 55 && !hasShortDescriptions) {
-            // Force fix prices even if we have enough items
-            repository.findAll().stream()
-                .filter(p -> p.getUploader().equals("System") && p.getPrice() < 1000.0)
-                .forEach(p -> {
-                    p.setPrice(1000.0 + new Random().nextInt(500));
-                    repository.save(p);
-                });
-            return;
-        }
+        performFullInit();
+    }
 
-        // If we reach here, we either don't have enough items OR they have old short descriptions
+    @Transactional
+    public void performFullInit() {
         repository.deleteByUploader("System");
         List<Product> products = new ArrayList<>();
         
