@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Login & Security - Artisan Gallery</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <header class="sticky-header">
+        <div class="container header-content">
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <a th:href="@{/account}" style="color: var(--forest-green); font-size: 1.2rem;"><i class="fas fa-chevron-left"></i></a>
+                <div class="logo">
+                    <h1><a th:href="@{/home}">Artisan Gallery</a></h1>
+                </div>
+            </div>
+
+            <div class="user-profile-header" th:if="${user != null}">
+                <span th:text="${user.fullName}">User Name</span>
+                <img th:src="${user.profilePicture}" alt="Profile">
+            </div>
+        </div>
+    </header>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="bottom-nav">
+        <a th:href="@{/home}" class="bottom-nav-item">
+            <i class="fas fa-home"></i>
+            <span>Home</span>
+        </a>
+
+        <a th:href="@{/search}" class="bottom-nav-item">
+            <i class="fas fa-search"></i>
+            <span>Search</span>
+        </a>
+
+        <a th:href="@{/cart}" class="bottom-nav-item">
+            <i class="fas fa-shopping-cart"></i>
+            <span>Cart</span>
+        </a>
+
+        <a th:href="@{/account}" class="bottom-nav-item active" style="color: var(--tan);">
+            <i class="fas fa-user-circle"></i>
+            <span>Account</span>
+        </a>
+    </nav>
+
+
+    <div class="container sub-page-container">
+        <div class="centered-form-wrapper" style="max-width: 800px; margin: 0 auto; background: white; padding: 40px; border-radius: 20px; box-shadow: var(--shadow); border: 1px solid #eee;">
+            <h1 class="serif-font" style="color: var(--forest-green); margin-bottom: 10px; margin-top: 0;">Login & Security</h1>
+            <p>Update your personal information and account settings.</p>
+
+            <hr>
+
+            <div style="text-align: center; margin-bottom: 40px;">
+                <img th:src="${user.profilePicture}" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid var(--tan); box-shadow: var(--shadow);" alt="Profile">
+                <form th:action="@{/account/update-profile-pic}" method="POST" enctype="multipart/form-data" style="margin-top: 15px;">
+                    <label for="fileInput" style="cursor: pointer; color: var(--forest-green); font-weight: bold; font-size: 0.9rem;">
+                        <i class="fas fa-camera"></i> Change Photo
+                    </label>
+                    <input type="file" id="fileInput" name="profilePic" onchange="this.form.submit()" style="display: none;">
+                </form>
+            </div>
+
+            <form th:action="@{/account/update-details}" method="POST">
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 10px; font-weight: bold;">Full Name</label>
+                    <input type="text" name="fullName" th:value="${user.fullName}" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd;" required>
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 10px; font-weight: bold;">Email Address</label>
+                    <input type="email" th:value="${user.email}" disabled style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; background: #f9f9f9; color: #777;">
+                </div>
+                <div style="margin-bottom: 30px;">
+                    <label style="display: block; margin-bottom: 10px; font-weight: bold;">New Password</label>
+                    <input type="password" name="password" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd;" placeholder="Leave blank to keep current">
+                </div>
+                <button type="submit" class="btn-primary">Save Changes</button>
+            </form>
+
+            <hr>
+
+            <div style="margin-top: 30px; margin-bottom: 30px;">
+                <h3 class="serif-font" style="color: var(--forest-green);">Account Actions</h3>
+                <a th:href="@{/account/logout}" class="btn-accent" style="width: 100%; box-sizing: border-box; display: block; text-decoration: none; text-align: center; background-color: var(--forest-green);">Log Out</a>
+            </div>
+
+            <hr>
+
+            <div style="margin-top: 30px;">
+                 <h3 class="serif-font" style="color: var(--forest-green);">Danger Zone</h3>
+                 <p style="font-size: 0.9rem; color: #666;">Permanently delete your account and all masterpieces.</p>
+                 <form th:action="@{/account/delete-permanently}" method="POST" onsubmit="return confirm('WARNING: This will permanently delete your account and all creations. Continue?')">
+                    <button type="submit" style="background: none; border: 1px solid #d63031; color: #d63031; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%;">Delete My Account Permanently</button>
+                 </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

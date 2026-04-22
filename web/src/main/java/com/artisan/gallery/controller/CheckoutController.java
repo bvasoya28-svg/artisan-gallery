@@ -1,8 +1,10 @@
 package com.artisan.gallery.controller;
 
+import com.artisan.gallery.model.CartItem;
 import com.artisan.gallery.model.OrderRecord;
 import com.artisan.gallery.model.Product;
 import com.artisan.gallery.model.User;
+import com.artisan.gallery.repository.CartItemRepository;
 import com.artisan.gallery.repository.OrderRepository;
 import com.artisan.gallery.service.ProductService;
 import com.artisan.gallery.service.UserService;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/checkout")
@@ -29,20 +32,29 @@ public class CheckoutController {
     @Autowired
     private OrderRepository orderRepository;
 
+    @Autowired
+    private CartItemRepository cartItemRepository;
+
     @GetMapping
     public String checkoutFromCart(HttpSession session, Model model) {
-        if (session.getAttribute("loggedIn") == null) return "redirect:/login";
+        String email = (String) session.getAttribute("userEmail");
+        if (email == null) return "redirect:/login";
         
-        List<Product> cart = (List<Product>) session.getAttribute("cart");
-        if (cart == null || cart.isEmpty()) return "redirect:/cart";
+        // Pull items from Database instead of session
+        List<CartItem> cartItems = cartItemRepository.findByUserEmail(email);
+        if (cartItems.isEmpty()) return "redirect:/cart";
 
-        prepareCheckoutModel(session, model, cart);
+        List<Product> products = cartItems.stream()
+                .map(CartItem::getProduct)
+                .collect(Collectors.toList());
+
+        prepareCheckoutModel(session, model, products);
         return "checkout";
     }
 
     @GetMapping("/direct")
     public String checkoutDirect(@RequestParam Long productId, HttpSession session, Model model) {
-        if (session.getAttribute("loggedIn") == null) return "redirect:/login";
+        if (session.getAttribute("userEmail") == null) return "redirect:/login";
         
         Product product = productService.getProductById(productId);
         if (product == null) return "redirect:/home";
@@ -60,7 +72,6 @@ public class CheckoutController {
         User user = userService.getUserByEmail(email);
         
         if (user == null) {
-            session.invalidate();
             return;
         }
 
@@ -73,7 +84,7 @@ public class CheckoutController {
 
     @GetMapping("/buy-now/{id}")
     public String buyNow(@PathVariable Long id, HttpSession session) {
-        if (session.getAttribute("loggedIn") == null) return "redirect:/login";
+        if (session.getAttribute("userEmail") == null) return "redirect:/login";
         return "redirect:/checkout/direct?productId=" + id;
     }
 
@@ -90,25 +101,30 @@ public class CheckoutController {
         String finalAddress = "default".equals(addressOption) ? user.getAddress() : newAddress;
         if (finalAddress == null || finalAddress.isEmpty()) finalAddress = "No address provided";
 
-        List<Product> items = (List<Product>) session.getAttribute("directCheckoutItems");
-        if (items == null) {
-            items = (List<Product>) session.getAttribute("cart");
+        List<Product> itemsToOrder = new ArrayList<>();
+
+        // Priority 1: Direct Checkout (Buy Now)
+        List<Product> directItems = (List<Product>) session.getAttribute("directCheckoutItems");
+        if (directItems != null && !directItems.isEmpty()) {
+            itemsToOrder.addAll(directItems);
+            session.removeAttribute("directCheckoutItems");
+        } else {
+            // Priority 2: Cart Items (Proceed to Checkout)
+            List<CartItem> cartItems = cartItemRepository.findByUserEmail(email);
+            if (!cartItems.isEmpty()) {
+                itemsToOrder.addAll(cartItems.stream().map(CartItem::getProduct).collect(Collectors.toList()));
+                cartItemRepository.deleteAll(cartItems); // Clear DB cart
+            }
         }
 
-        if (items == null || items.isEmpty()) return "redirect:/home";
+        if (itemsToOrder.isEmpty()) return "redirect:/home";
 
-        for (Product p : items) {
+        for (Product p : itemsToOrder) {
             OrderRecord order = new OrderRecord(
                 userName, email, p.getName(), p.getPrice(), 
                 LocalDateTime.now(), finalAddress, paymentMethod, "PLACED", p.getImageUrl()
             );
             orderRepository.save(order);
-        }
-
-        if (session.getAttribute("directCheckoutItems") != null) {
-            session.removeAttribute("directCheckoutItems");
-        } else if (session.getAttribute("cart") != null) {
-            ((List<Product>) session.getAttribute("cart")).clear();
         }
 
         return "redirect:/account/orders?success";

@@ -1,18 +1,17 @@
 package com.artisan.gallery.service;
 
 import com.artisan.gallery.model.Product;
-import com.artisan.gallery.repository.CartItemRepository;
 import com.artisan.gallery.repository.ProductRepository;
+import com.artisan.gallery.repository.CartItemRepository;
 import com.artisan.gallery.repository.ReviewRepository;
-import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.stream.Collectors;
 
 @Service
 public class ProductService {
@@ -21,233 +20,146 @@ public class ProductService {
     private ProductRepository repository;
 
     @Autowired
-    private ReviewRepository reviewRepository;
-
-    @Autowired
     private CartItemRepository cartItemRepository;
 
-    @Value("${cloudinary.cloud_name:}")
-    private String cloudName;
-
-    public String getCloudinaryUrl(String fileName) {
-        if (fileName == null || fileName.isEmpty()) return "https://res.cloudinary.com/dpt2wn9lh/image/upload/p1";
-        if (fileName.startsWith("http")) return fileName;
-        String activeCloudName = (cloudName == null || cloudName.isEmpty()) ? "dpt2wn9lh" : cloudName;
-        String publicId = fileName.contains(".") ? fileName.substring(0, fileName.lastIndexOf('.')) : fileName;
-        return "https://res.cloudinary.com/" + activeCloudName + "/image/upload/" + publicId;
-    }
-
-    public List<Product> getAllProducts() {
-        List<Product> products = repository.findAll();
-        products.forEach(p -> p.setImageUrl(getCloudinaryUrl(p.getImageUrl())));
-        return products;
-    }
-
-    public List<Product> getProductsByCategory(String category) {
-        List<Product> products;
-        if ("All".equals(category) || category == null || category.isEmpty()) {
-            products = repository.findAll();
-        } else {
-            products = repository.findByCategory(category);
-        }
-        products.forEach(p -> p.setImageUrl(getCloudinaryUrl(p.getImageUrl())));
-        return products;
-    }
-
-    public List<Product> getSystemProducts() {
-        List<Product> products = repository.findByUploader("System");
-        products.forEach(p -> p.setImageUrl(getCloudinaryUrl(p.getImageUrl())));
-        return products;
-    }
-
-    public List<Product> getSharedCreations(String currentUserEmail) {
-        List<Product> products;
-        if (currentUserEmail == null) {
-            products = repository.findByUploaderNot("System");
-        } else {
-            products = repository.findByUploaderNotAndUploaderNot("System", currentUserEmail);
-        }
-        products.forEach(p -> p.setImageUrl(getCloudinaryUrl(p.getImageUrl())));
-        return products;
-    }
-    
-    public List<Product> getUserItems(String email) {
-        if (email == null) return new ArrayList<>();
-        List<Product> products = repository.findByUploader(email);
-        products.forEach(p -> p.setImageUrl(getCloudinaryUrl(p.getImageUrl())));
-        return products;
-    }
-
-    public List<Product> searchProducts(String query) {
-        List<Product> products = repository.findByNameContainingIgnoreCaseOrDescriptionContainingIgnoreCaseOrCategoryContainingIgnoreCase(query, query, query);
-        products.forEach(p -> p.setImageUrl(getCloudinaryUrl(p.getImageUrl())));
-        return products;
-    }
-
-    public Product getProductById(Long id) {
-        Product p = repository.findById(id).orElse(null);
-        if (p != null) p.setImageUrl(getCloudinaryUrl(p.getImageUrl()));
-        return p;
-    }
-
-    public void saveProduct(Product product) {
-        if (product.getPrice() < 1000.0) product.setPrice(1000.0);
-        else if (product.getPrice() > 5000.0) product.setPrice(5000.0);
-        repository.save(product);
-    }
-
-    @Transactional
-    public void deleteProduct(Long id) {
-        reviewRepository.deleteByProductId(id);
-        repository.deleteById(id);
-    }
-
-    public List<Product> getSuggestions(String category, Long excludeId) {
-        List<Product> products = repository.findByCategory(category).stream()
-                .filter(p -> !p.getId().equals(excludeId))
-                .limit(5)
-                .toList();
-        products.forEach(p -> p.setImageUrl(getCloudinaryUrl(p.getImageUrl())));
-        return products;
-    }
+    @Autowired
+    private ReviewRepository reviewRepository;
 
     @org.springframework.context.event.EventListener(org.springframework.boot.context.event.ApplicationReadyEvent.class)
     public void initData() {
-        // Run in a new thread so the app opens its port immediately and doesn't timeout on Render
         Thread initThread = new Thread(() -> {
             try {
-                // Wait for the app to be fully up and the port to be open
                 Thread.sleep(5000); 
-                System.out.println(">>> [STARTUP] Beginning background catalog initialization...");
-                
-                // Call performInit without its own @Transactional here to manage chunks
-                performInit();
-                
-                System.out.println(">>> [STARTUP] Background initialization complete!");
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
+                System.out.println(">>> [STARTUP] Starting FULL catalog update...");
+                performSafeUpdate();
+                System.out.println(">>> [STARTUP] Catalog update complete!");
             } catch (Exception e) {
-                System.err.println(">>> [ERROR] Background initialization failed: " + e.getMessage());
-                e.printStackTrace();
+                System.err.println(">>> [ERROR] Update failed: " + e.getMessage());
             }
         });
         initThread.setDaemon(true);
         initThread.start();
     }
 
-    public void performInit() {
-        System.out.println(">>> [CATALOG CHECK] Verifying system items...");
-        List<Product> systemProducts = repository.findByUploader("System");
+    public void performSafeUpdate() {
+        List<Product> existing = repository.findByUploader("System");
+        List<Product> toUpdate = new ArrayList<>();
         
-        boolean hasShortDescriptions = systemProducts.stream()
-                .anyMatch(p -> p.getDescription() == null || p.getDescription().length() < 150);
+        // --- PAINTINGS (p1-p10) ---
+        update(toUpdate, existing, "Fruit Still Life", "This stunning oil painting captures the vibrant essence of fresh harvest, featuring a meticulously detailed arrangement of ripe apples, velvet-skinned grapes, and a rustic wooden bowl. Ideal for a sophisticated kitchen or dining area.", "p1.jpg", "Paintings", "Anita Sharma", 4.8);
+        update(toUpdate, existing, "The Knight's Vow", "A breathtaking romantic classical masterpiece depicting a solemn knight kneeling before a radiant princess in a medieval castle hall. A powerful focal point for any grand living room.", "p2.jpg", "Paintings", "Rajesh Kumar", 4.5);
+        update(toUpdate, existing, "Coastal Village", "Immerse yourself in the charm of a sun-drenched Mediterranean town with this vibrant acrylic painting. Cascading houses overlook a sparkling turquoise sea.", "p3.jpg", "Paintings", "Siddharth Verma", 4.9);
+        update(toUpdate, existing, "Golden Moonbeam", "A serene night sky featuring a large golden moon reflected on a calm sea. Perfect for a bedroom or meditation space.", "p4.jpg", "Paintings", "Neha Patel", 4.2);
+        update(toUpdate, existing, "The Mermaid's Grace", "An ethereal underwater portrait of a mermaid in deep blue waters, exploring the mystery of the deep ocean.", "p5.jpg", "Paintings", "Amitabh Gupta", 4.7);
+        update(toUpdate, existing, "Flamenco Soul", "A dynamic painting of a dancer in a vibrant red dress, capturing the raw passion and energy of Spanish dance.", "p6.jpg", "Paintings", "Priya Singh", 4.4);
+        update(toUpdate, existing, "Royal Peacock", "A textured acrylic painting of a peacock with a stunning tail highlighted with metallic gold and emerald green.", "p7.jpg", "Paintings", "Vikram Malhotra", 4.6);
+        update(toUpdate, existing, "The Forbidden Castle", "An atmospheric dark fantasy landscape featuring a mysterious gothic castle perched on a jagged cliff.", "p8.jpg", "Paintings", "Deepika Iyer", 4.3);
+        update(toUpdate, existing, "Voyage into Unknown", "A tall ship sailing through a rocky cave opening, signifying the start of a legendary and brave journey.", "p9.jpg", "Paintings", "Arjun Reddy", 4.7);
+        update(toUpdate, existing, "Mystic Forest", "A high-fantasy landscape capturing a glowing, bioluminescent forest at twilight with enchanted trees.", "p10.jpg", "Paintings", "Ishani Bose", 4.6);
 
-        if (!systemProducts.isEmpty() && !hasShortDescriptions && systemProducts.size() >= 55) {
-            System.out.println(">>> [CATALOG OK] 59 items found with long descriptions. Skipping refresh.");
-            return;
-        }
+        // --- KITCHEN (k1-k13) ---
+        update(toUpdate, existing, "Leafy Tea Infuser", "Brew the perfect cup of loose-leaf tea with this charming and practical infuser. The handle is shaped like a delicate green sprout, making it look like a plant is growing out of your mug. Made from food-grade, heat-resistant silicone, it is easy to clean and fits most standard mugs. It's a delightful gift for nature lovers and tea enthusiasts alike.", "k1.jpg", "Kitchen", "Karan Kapur", 4.7);
+        update(toUpdate, existing, "English Breakfast Set", "A complete ceramic breakfast set featuring two mugs, two plates, and a teapot with a classic ivory glaze. Each piece is hand-thrown and fired at high temperatures for durability. Perfect for a cozy morning or a formal afternoon tea.", "k2.jpg", "Kitchen", "Kaira Advani", 4.5);
+        update(toUpdate, existing, "Blue Ceramic Teapot", "This artisanal teapot features a deep cobalt blue glaze with subtle earthy speckles. Its ergonomic handle and drip-free spout ensure a smooth pour every time. A beautiful addition to any kitchen counter.", "k3.jpg", "Kitchen", "Suresh Raina", 4.8);
+        update(toUpdate, existing, "Handcrafted Spice Rack", "Keep your kitchen organized with this three-tier spice rack made from reclaimed teak wood. It includes 12 glass jars with airtight wooden lids, preserving the freshness and aroma of your spices.", "k4.jpg", "Kitchen", "Manish Pandey", 4.3);
+        update(toUpdate, existing, "Marble Mortar & Pestle", "Grind herbs and spices like a professional chef with this heavy-duty solid marble set. The polished exterior and rough interior provide the perfect surface for crushing and blending flavors.", "k5.jpg", "Kitchen", "Hardik Pandya", 4.9);
+        update(toUpdate, existing, "Bamboo Cutting Board", "A sustainable and knife-friendly cutting board with a built-in juice groove. Its large surface area makes it ideal for chopping vegetables or serving as a rustic cheese board.", "k6.jpg", "Kitchen", "Rohit Sharma", 4.6);
+        update(toUpdate, existing, "Copper Mixing Bowls", "Set of three stainless steel bowls with a stunning hammered copper exterior. These bowls are not only functional for baking but also beautiful enough to use as serving pieces.", "k7.jpg", "Kitchen", "Virat Kohli", 4.4);
+        update(toUpdate, existing, "Linen Apron", "A stylish and durable cross-back apron made from 100% natural linen. It features two deep front pockets and a comfortable fit that doesn't pull on your neck.", "k8.jpg", "Kitchen", "Shubman Gill", 4.2);
+        update(toUpdate, existing, "Wooden Honey Dipper", "Drizzle honey without the mess using this hand-carved olive wood dipper. Its deep grooves are designed to hold onto honey until you're ready to pour.", "k9.jpg", "Kitchen", "KL Rahul", 4.1);
+        update(toUpdate, existing, "Ceramic Egg Carton", "A reusable and eco-friendly way to store half a dozen eggs in your fridge. This hand-painted ceramic tray adds a vintage touch to your kitchen organization.", "k10.jpg", "Kitchen", "Rishabh Pant", 4.5);
+        update(toUpdate, existing, "Glass Herb Infuser", "Infuse oils and vinegars with fresh herbs and garlic using this elegant glass bottle with a built-in strainer. A must-have for home cooks who love bold flavors.", "k11.jpg", "Kitchen", "Jasprit Bumrah", 4.3);
+        update(toUpdate, existing, "Terracotta Bread Warmer", "Keep your bread warm throughout dinner with this engraved terracotta stone. Simply heat it in the oven and place it at the bottom of your bread basket.", "k12.jpg", "Kitchen", "Mohammed Shami", 4.6);
+        update(toUpdate, existing, "Woven Table Runner", "Add a touch of bohemian style to your dining table with this hand-woven cotton runner. Its intricate patterns and fringed edges complement any decor.", "k13.jpg", "Kitchen", "Ravindra Jadeja", 4.4);
 
-        System.out.println(">>> [REFRESH REQUIRED] Reason: " + (systemProducts.isEmpty() ? "No items" : "Short descriptions detected"));
+        // --- HOME DECOR (d1-d13) ---
+        update(toUpdate, existing, "Boho Macrame Wall Hanging", "Elevate your living space with this intricate macrame wall art, handcrafted with 100% natural cotton cord. The geometric patterns and flowing fringe add a cozy, bohemian vibe to any room. It hangs gracefully on a polished wooden dowel, making it an easy addition to your bedroom or gallery wall.", "d1.jpg", "Home Decor", "Ishaan Khatter", 4.8);
+        update(toUpdate, existing, "Artisanal Scented Candle", "Fill your home with the calming aroma of lavender and sandalwood. This soy wax candle is hand-poured into a reusable ceramic jar and features a crackling wood wick for a fireplace-like ambiance.", "d2.jpg", "Home Decor", "Ananya Panday", 4.6);
+        update(toUpdate, existing, "Woven Seagrass Basket", "A versatile storage solution that doubles as a stylish planter. This sturdy basket is hand-woven by skilled artisans and features reinforced handles for easy carrying.", "d3.jpg", "Home Decor", "Sara Ali Khan", 4.5);
+        update(toUpdate, existing, "Crystal Geode Bookends", "Add a touch of natural luxury to your bookshelf with these heavy amethyst geode halves. Each piece is unique, showcasing brilliant purple crystals that sparkle in the light.", "d4.jpg", "Home Decor", "Janhvi Kapoor", 4.9);
+        update(toUpdate, existing, "Vintage Brass Mirror", "A classic round mirror with a hand-etched brass frame. Its timeless design adds depth and character to your entryway or vanity area.", "d5.jpg", "Home Decor", "Kartik Aaryan", 4.4);
+        update(toUpdate, existing, "Embroidered Silk Cushion", "Luxurious silk cushion cover featuring intricate hand-embroidered floral motifs. It adds a pop of color and a touch of elegance to your sofa or armchair.", "d6.jpg", "Home Decor", "Ayushmann Khurrana", 4.3);
+        update(toUpdate, existing, "Modern Ceramic Vase", "A minimalist matte white vase with a unique asymmetrical shape. Ideal for displaying dried pampas grass or a single fresh bloom.", "d7.jpg", "Home Decor", "Ranbir Kapoor", 4.7);
+        update(toUpdate, existing, "Hand-tufted Rug", "A soft and durable area rug with a bold geometric pattern. Hand-tufted from 100% New Zealand wool, it provides warmth and comfort underfoot.", "d8.jpg", "Home Decor", "Alia Bhatt", 4.6);
+        update(toUpdate, existing, "Sculptural Iron Lamp", "An industrial-style table lamp with a hand-forged iron base and a warm Edison bulb. It creates a cozy and sophisticated atmosphere in any study or living room.", "d9.jpg", "Home Decor", "Ranveer Singh", 4.5);
+        update(toUpdate, existing, "Botanical Framed Print", "A high-quality reproduction of a vintage botanical illustration, professionally framed in a slim oak wood frame. Perfect for a nature-inspired gallery wall.", "d10.jpg", "Home Decor", "Deepika Padukone", 4.2);
+        update(toUpdate, existing, "Terrarium Kit", "Create your own miniature garden with this all-inclusive kit. Includes a geometric glass container, soil, pebbles, and moss. Just add your favorite succulents!", "d11.jpg", "Home Decor", "Vicky Kaushal", 4.8);
+        update(toUpdate, existing, "Driftwood Wall Clock", "A unique and rustic wall clock crafted from pieces of natural driftwood. Its silent movement and minimalist hands make it a functional work of art.", "d12.jpg", "Home Decor", "Katrina Kaif", 4.4);
+        update(toUpdate, existing, "Hand-painted Tile Coasters", "Set of four ceramic coasters featuring traditional hand-painted motifs. Each coaster is cork-backed to protect your furniture from heat and moisture.", "d13.jpg", "Home Decor", "Shahid Kapoor", 4.3);
+
+        // --- JEWELRY (j1-j13) ---
+        update(toUpdate, existing, "Silver Moonstone Ring", "A delicate sterling silver ring featuring a high-quality iridescent moonstone. The stone glows with a mysterious blue light, symbolizing intuition and protection. Hand-polished to a brilliant shine, it’s a perfect statement piece for any occasion.", "j1.jpg", "Jewelry", "Sonam Kapoor", 4.9);
+        update(toUpdate, existing, "Gold Filigree Earrings", "Stunning 18k gold-plated earrings with intricate filigree work. These lightweight earrings are inspired by traditional Indian motifs and add a touch of regality to any outfit.", "j2.jpg", "Jewelry", "Kareena Kapoor", 4.7);
+        update(toUpdate, existing, "Pearl Pendant Necklace", "A classic and elegant necklace featuring a genuine freshwater pearl on a fine 14k gold chain. A timeless gift that symbolizes purity and grace.", "j3.jpg", "Jewelry", "Priyanka Chopra", 4.8);
+        update(toUpdate, existing, "Beaded Boho Bracelet", "A colorful multi-strand bracelet made with tiny glass seed beads and a secure magnetic clasp. Perfect for layering with other bracelets for a stacked look.", "j4.jpg", "Jewelry", "Shraddha Kapoor", 4.4);
+        update(toUpdate, existing, "Hammered Copper Cuff", "A bold and rustic cuff bracelet made from pure hammered copper. Over time, it will develop a beautiful natural patina, making it truly one-of-a-kind.", "j5.jpg", "Jewelry", "Tiger Shroff", 4.3);
+        update(toUpdate, existing, "Emerald Stud Earrings", "Vibrant green lab-created emeralds set in minimalist 925 sterling silver studs. A pop of luxury for everyday wear.", "j6.jpg", "Jewelry", "Varun Dhawan", 4.6);
+        update(toUpdate, existing, "Turquoise Statement Necklace", "A chunky necklace featuring large turquoise stones and silver-tone accents. It brings a Southwestern flair to a simple white tee or a flowing dress.", "j7.jpg", "Jewelry", "Sidharth Malhotra", 4.5);
+        update(toUpdate, existing, "Amethyst Drop Earrings", "Elegant teardrop-shaped amethyst stones suspended from delicate silver wires. The deep purple hue is said to promote calm and clarity.", "j8.jpg", "Jewelry", "Kiara Advani", 4.7);
+        update(toUpdate, existing, "Rose Gold Initial Ring", "A personalized ring featuring a dainty initial on a thin rose gold band. A thoughtful and stylish gift for yourself or a loved one.", "j9.jpg", "Jewelry", "Kriti Sanon", 4.2);
+        update(toUpdate, existing, "Leather Braided Bracelet", "A rugged and masculine bracelet made from high-quality braided leather with a stainless steel anchor clasp.", "j10.jpg", "Jewelry", "Hrithik Roshan", 4.5);
+        update(toUpdate, existing, "Labradorite Hoop Earrings", "Modern hoops adorned with small labradorite beads that flash with hidden color when they catch the light.", "j11.jpg", "Jewelry", "Tara Sutaria", 4.4);
+        update(toUpdate, existing, "Raw Quartz Crystal Point", "A natural clear quartz crystal point on a simple silver cord. This necklace celebrates the raw beauty of earth's creations.", "j12.jpg", "Jewelry", "Disha Patani", 4.6);
+        update(toUpdate, existing, "Minimalist Bar Necklace", "A sleek and polished horizontal bar on a fine silver chain. Perfect for engraving a special date or a meaningful word.", "j13.jpg", "Jewelry", "Arjun Kapoor", 4.3);
+
+        // --- POTTERY (po1-po10) ---
+        update(toUpdate, existing, "Hand-thrown Coffee Mug", "Start your morning with this large, earthy coffee mug, hand-thrown on a potter’s wheel and finished with a unique speckled glaze. The wide handle provides a comfortable grip, while the thick ceramic walls keep your drink hot for longer. Each mug is individually crafted, so no two are exactly alike.", "po1.jpg", "Pottery", "Rajkumar Rao", 4.7);
+        update(toUpdate, existing, "Speckled Serving Bowl", "A large and shallow bowl perfect for serving salads or pasta. The cream glaze is accented with dark iron spots, giving it a rustic and modern feel.", "po2.jpg", "Pottery", "Ayushmann Khurrana", 4.6);
+        update(toUpdate, existing, "Mini Succulent Planters", "Set of three tiny ceramic pots with built-in drainage holes. These cute planters are ideal for small succulents or cacti on a sunny windowsill.", "po3.jpg", "Pottery", "Pankaj Tripathi", 4.5);
+        update(toUpdate, existing, "Ribbed Clay Vase", "A tall and slender vase with a distinctive ribbed texture. Its natural terracotta color complements any flower arrangement.", "po4.jpg", "Pottery", "Nawazuddin Siddiqui", 4.4);
+        update(toUpdate, existing, "Glazed Incense Holder", "A minimalist incense burner with a teardrop shape that catches all the ash. Hand-dipped in a calming celadon green glaze.", "po5.jpg", "Pottery", "Manoj Bajpayee", 4.8);
+        update(toUpdate, existing, "Geometric Fruit Bowl", "A striking centerpiece for your kitchen island. This bowl features a faceted geometric design that adds a modern architectural touch to your home.", "po6.jpg", "Pottery", "Vijay Varma", 4.3);
+        update(toUpdate, existing, "Blue Ceramic Teacup", "An elegant teacup without a handle, inspired by traditional Japanese tea ceremonies. Its smooth glaze feels wonderful in your hands.", "po7.jpg", "Pottery", "Siddhant Chaturvedi", 4.5);
+        update(toUpdate, existing, "Textured Wall Planter", "Save space and add greenery to your walls with this flat-backed ceramic planter. Its rough, sandy texture provides a nice contrast to green leaves.", "po8.jpg", "Pottery", "Vikrant Massey", 4.2);
+        update(toUpdate, existing, "Rustic Pitcher", "A hand-formed pitcher with a wide spout and a sturdy handle. Perfect for serving cold water or lemonade during a summer gathering.", "po9.jpg", "Pottery", "Jaideep Ahlawat", 4.6);
+        update(toUpdate, existing, "Hand-painted Plate Set", "Set of four small dessert plates, each featuring a different hand-painted botanical motif. A delightful way to end any meal.", "po10.jpg", "Pottery", "Pratik Gandhi", 4.4);
         
-        // Use a single transaction for the wipe to ensure it's fast
-        cleanupAndReinit(systemProducts);
+        saveBatch(toUpdate);
+    }
+
+    private void update(List<Product> toSave, List<Product> existing, String name, String desc, String img, String cat, String art, Double rate) {
+        Product p = existing.stream()
+                .filter(ext -> ext.getName().equals(name))
+                .findFirst()
+                .orElse(new Product());
+        
+        p.setName(name);
+        p.setDescription(desc);
+        p.setImageUrl(img);
+        p.setCategory(cat);
+        p.setArtist(art);
+        p.setRating(rate);
+        if (p.getPrice() == null) p.setPrice((double)(1000 + new Random().nextInt(4000)));
+        p.setUploader("System");
+        p.setInStock(true);
+        toSave.add(p);
     }
 
     @Transactional
-    protected void cleanupAndReinit(List<Product> systemProducts) {
-        // 1. Bulk Delete associated data to avoid FK constraints and timeouts
-        List<Long> systemIds = systemProducts.stream().map(Product::getId).toList();
-        if (!systemIds.isEmpty()) {
-            System.out.println(">>> [CLEANUP] Removing reviews and cart items for " + systemIds.size() + " products...");
-            for (Long id : systemIds) {
-                reviewRepository.deleteByProductId(id);
-            }
-            cartItemRepository.deleteByProductIds(systemIds);
-            
-            // 2. Clear system products
-            repository.deleteByUploader("System");
-            repository.flush();
-        }
-        
-        System.out.println(">>> [CLEANUP DONE] Old catalog wiped. Rebuilding...");
-
-        List<Product> products = new ArrayList<>();
-        
-        // --- PAINTINGS (p1-p10) ---
-        addP(products, "Fruit Still Life", "This stunning oil painting captures the vibrant essence of fresh harvest, featuring a meticulously detailed arrangement of ripe apples, velvet-skinned grapes, and a rustic wooden bowl set upon a small decorative easel. Every brushstroke emphasizes the interplay of light and shadow, bringing a lifelike depth to the canvas. The artist has used a classical layering technique to ensure the colors remain vivid and rich for decades. Ideal for a sophisticated kitchen or dining area, this piece invites a sense of natural beauty and timeless artistry into your home. The compact size makes it a perfect accent for mantels or bookshelf displays, adding a touch of elegance to any interior design style.", "p1.jpg", "Paintings", "Anita Sharma", 4.8);
-        addP(products, "The Knight's Vow", "A breathtaking romantic classical masterpiece that transports the viewer to an age of chivalry and honor. The painting depicts a solemn knight in polished plate armor kneeling before a radiant princess in a flowing silken gown. The backdrop features a dimly lit stone corridor of a medieval castle, illuminated by the warm, flickering glow of candlelight. The emotional depth captured in their gaze tells a story of devotion, sacrifice, and eternal love. Painted with fine-detail acrylics and finished with a protective glaze, this artwork is a true collector's item for those who appreciate historical narratives and high-fidelity classical art styles. It serves as a powerful focal point for any grand living room or study.", "p2.jpg", "Paintings", "Rajesh Kumar", 4.5);
-        addP(products, "Coastal Village", "Immerse yourself in the charm of a sun-drenched Mediterranean town with this vibrant acrylic painting on high-quality canvas. The artwork showcases a cascade of brightly colored houses—terracotta oranges, cerulean blues, and pale yellows—clinging to a rugged cliffside overlooking the sparkling turquoise sea. Intricate details like tiny flower boxes on balconies and winding cobblestone paths add to the immersive quality of the piece. The artist uses a bold, impressionistic style with heavy textures to convey the warmth and energy of a coastal summer. This painting is perfect for brightening up a modern apartment or bringing a holiday feel to a workspace, offering a daily window into a peaceful, sun-kissed world.", "p3.jpg", "Paintings", "Siddharth Verma", 4.9);
-        addP(products, "Golden Moonbeam", "A serene night sky featuring a large golden moon reflected on the calm sea. This oil-on-canvas piece uses a muted palette of deep blues and silvers, contrasted sharply by the brilliant gold of the lunar reflection. It captures a moment of absolute stillness, perfect for a bedroom or meditation space. The texture of the waves is achieved through a thick impasto technique, giving the water a physical presence that changes as light moves across the room during the day. This artwork provides a calming influence and is a sophisticated addition to any minimalist or contemporary art collection.", "p4.jpg", "Paintings", "Neha Patel", 4.2);
-        addP(products, "The Mermaid's Grace", "An ethereal underwater portrait of a mermaid in deep blue waters. The fluid movement of her hair and the shimmering scales of her tail are rendered with iridescent paints that catch the light. This fantasy piece explores the mystery of the deep ocean, using layers of transparent glazes to create an atmospheric, watery effect. It brings a sense of wonder and mythological beauty to any wall, appealing to those who love folklore and aquatic themes. The artist spent over fifty hours perfecting the light refraction effects to ensure the viewer feels truly submerged in this magical realm.", "p5.jpg", "Paintings", "Amitabh Gupta", 4.7);
-        addP(products, "Flamenco Soul", "A dynamic painting of a dancer in a vibrant red dress, capturing the raw passion of Spanish dance. The blurred edges and sharp lines of the dress create a sense of high-speed movement and intensity. This artwork is filled with energy, using a warm color palette of crimsons, golds, and blacks. It serves as a powerful statement piece, celebrating cultural expression and the strength of the human spirit through the art of dance. The artist’s use of palette knives creates a thick, expressive texture that makes the dress appear to swirl right off the canvas.", "p6.jpg", "Paintings", "Priya Singh", 4.4);
-        addP(products, "Royal Peacock", "A textured acrylic painting of a peacock with a stunning colorful tail. Each 'eye' of the feather is highlighted with metallic gold and emerald green, creating a jewel-like effect. The background is a minimalist cream, allowing the majestic bird to take center stage. This painting symbolizes beauty and royalty, making it a luxurious addition to a grand entryway or a formal living room where its intricate details can be admired. The artist hand-applied hundreds of tiny gold leaf accents to ensure the painting glimmers brilliantly under ambient lighting.", "p7.jpg", "Paintings", "Vikram Malhotra", 4.6);
-        addP(products, "The Forbidden Castle", "An atmospheric dark fantasy landscape featuring a mysterious castle perched on a jagged cliff amidst a misty forest. The moody lighting and gothic architecture evoke a sense of ancient secrets and adventure. Painted with a focus on silhouette and scale, this piece is perfect for fans of epic fantasy and dark aesthetics. It invites the viewer to imagine the stories hidden within the stone walls and the fog-filled valley below. The artist used a unique salt-scrubbing technique on the watercolors to create the haunting, grainy effect of the surrounding mist.", "p8.jpg", "Paintings", "Deepika Iyer", 4.3);
-        addP(products, "Voyage into Unknown", "A tall ship seen through a rocky cave opening, signifying the start of a legendary journey. The contrast between the dark, rough cave walls and the bright, open sea creates a powerful framing effect. This maritime oil painting uses traditional techniques to capture the majesty of wind-filled sails and the hope of discovery. It is an inspiring piece for an office or study, representing courage and the pursuit of new horizons. The ship is modeled after a 17th-century galleon, with historical accuracy maintained in every rope and pulley.", "p9.jpg", "Paintings", "Arjun Reddy", 4.1);
-        addP(products, "Midnight Lantern", "A solitary lamp post lighting up a dark, moody street scene after a light rain. The reflections of the amber light on the wet cobblestones create a nostalgic and peaceful atmosphere. This urban landscape painting focuses on the beauty found in quiet city nights, using a palette of charcoal, navy, and warm yellow. It brings a sense of urban romance and quiet contemplation to any modern interior space. The soft glow of the lantern is painted with multiple thin layers of yellow to create a realistic, radiating light effect that draws the eye immediately.", "p10.jpg", "Paintings", "Maya Deshmukh", 4.9);
-
-        // --- POTTERY (po1-po10) ---
-        addP(products, "Starry Night Vase", "Inspired by Van Gogh's legendary vision, this hand-painted ceramic vase is a work of art. The surface is adorned with swirling nebulae of deep indigo and golden yellows, recreating a celestial sky. Hand-thrown on a traditional potter's wheel and fired twice for a glass-like finish. The elegant curvature makes it ideal for long-stemmed flowers or as a standalone statement piece. This pottery combines functionality with prestige, making it a unique gift for collectors of fine handmade ceramics. Every vase is individually numbered and signed by the artist, ensuring you own a one-of-a-kind piece of ceramic history.", "po1.jpg", "Pottery", "Sunita Rao", 5.0);
-        addP(products, "Songbird Pitcher", "A rustic hand-painted pitcher featuring a detailed woodland bird amidst autumn leaves. The earthy tones of the glaze and the fine linework of the bird's feathers show incredible artisan skill. Fully functional for serving drinks or beautiful enough to display on a kitchen shelf. This piece brings a touch of nature's simplicity into your home, celebrating the traditional craft of functional pottery with a decorative, artistic twist. The handle is ergonomically designed for a comfortable pour, making it as practical for a breakfast table as it is beautiful for a display cabinet.", "po2.jpg", "Pottery", "Karan Johar", 4.3);
-        addP(products, "Sunflower Vase", "A tall ceramic vase adorned with bright, sunny sunflower motifs. The petals are sculpted in low relief, giving the vase a tactile, three-dimensional quality. The vibrant yellow glaze is contrasted by a deep forest green at the base. This vase is like a permanent burst of sunshine for your room, designed to hold large bouquets and bring a cheerful, farmhouse-chic aesthetic to your interior decor. The artist used a unique sgraffito technique to scratch the fine details of the flower centers into the clay, revealing the natural ceramic body beneath the vibrant glaze.", "po3.jpg", "Pottery", "Lata Mangeshkar", 4.7);
-        addP(products, "Moroccan Sunset Jar", "An intricately designed ceramic jar with traditional patterns inspired by North African art. The geometric motifs are hand-carved into the clay before firing and filled with vibrant sunset oranges and deep purples. This decorative jar features a fitted lid with a sculpted knob, making it perfect for storing small treasures or simply serving as a stunning cultural accent on a mantel or bookshelf. The jar is a celebration of geometry and color, representing weeks of careful carving and precision painting to achieve the flawless symmetry seen in the traditional patterns.", "po4.jpg", "Pottery", "Rohan Joshi", 4.4);
-        addP(products, "White Lily Base", "An elegant ceramic lamp base shaped like the delicate, overlapping petals of a blooming white lily. The soft, satin finish of the glaze reflects light beautifully even when the lamp is off. This piece is a marriage of lighting design and sculptural art, providing a sophisticated and organic foundation for your choice of lampshade. It brings a sense of serenity and high-end floral elegance to a bedside table or living room corner. The piece is weighted with extra clay at the base to ensure stability, making it a safe and durable functional art piece for any high-traffic home area.", "po5.jpg", "Pottery", "Tanu Shree", 4.2);
-        addP(products, "Sweet Ribbon Vase", "A light blue ceramic vase with a sculpted pink ribbon detail that appears to be tied around its neck. The playful and feminine design is achieved through careful clay manipulation and soft pastel glazes. This vase is perfect for a nursery, a girl's bedroom, or as a whimsical gift. Its gentle aesthetic and smooth finish make it a charming addition to any space that needs a touch of sweetness and artisanal character. The 'ribbon' is actually part of the clay structure, seamlessly integrated during the throwing process to create an illusion of softness in a hard ceramic form.", "po6.jpg", "Pottery", "Isha Ambani", 4.8);
-        addP(products, "Winter Rose Teapot", "An exquisite ceramic teapot shaped like a blooming blue rose. The body is formed by hand-sculpted petals, while the handle and spout resemble winding stems. Accompanied by matching leaf-shaped saucers, this piece represents hours of painstaking craftsmanship. The interior is fully glazed with food-safe materials, making it a functional heirloom-quality item for those who celebrate the ritual of tea and the beauty of nature-inspired design. The spout is precision-engineered to provide a dripless pour, ensuring that your tea service remains as elegant and clean as the teapot itself.", "po7.jpg", "Pottery", "Kabir Khan", 4.6);
-        addP(products, "Bloom Tea Spoons", "A set of four ceramic spoons and saucers shaped like delicate spring flowers. Each spoon is hand-painted in a different pastel shade—lavender, rose, mint, and sky blue. These tiny masterpieces are perfect for adding a touch of enchantment to your morning coffee or tea. They showcase the artist's ability to turn everyday utensils into miniature works of art that are both durable and delightful to use. The set comes in a custom-fitted velvet box, making it an ideal gift for weddings or high-tea enthusiasts who appreciate the finer details of table setting.", "po8.jpg", "Pottery", "Meera Nair", 4.1);
-        addP(products, "Starry Sky Set", "A complete ceramic tea service featuring deep midnight blue glazes and hand-painted golden stars. The set includes a teapot, four cups, and a serving tray, all designed to transport you to a celestial realm with every sip. The golden accents are real 24k gold luster, applied and fired in a third kiln stage for a permanent, luxurious shimmer. This set is the ultimate statement in artisanal luxury and cosmic-inspired home decor. The tray is finished with a non-slip texture to ensure that the delicate cups remain secure while being carried, blending safety with high-end aesthetic design.", "po9.jpg", "Pottery", "Nitin Gadkari", 4.5);
-        addP(products, "Galaxy Plate", "A decorative ceramic plate featuring a swirling nebula of cobalt blues, deep purples, and shimmering golds. The glaze is applied using a secret multi-layering technique that creates a sense of infinite depth. This plate is intended for display as wall art or on a stand, bringing the majesty of the universe into your home. Each plate is a unique creation, with the 'stars' appearing in different constellations every time. The back of the plate includes a pre-installed heavy-duty wire loop, allowing you to hang it safely and securely on any wall as a focal point of your gallery.", "po10.jpg", "Pottery", "Omkar Nath", 4.9);
-
-        // --- CROCHET (cr1-cr10) ---
-        addP(products, "Garden Keychains", "A charming assortment of tiny crocheted fruits and flowers designed to keep your keys safe and stylish. Each piece is hand-stitched using fine cotton thread and filled with hypoallergenic stuffing. From tiny strawberries to miniature sunflowers, these keychains showcase the incredible precision of micro-crochet. They make perfect small gifts or party favors, bringing a pop of handmade color and texture to your everyday bag or set of keys. The metal rings are high-grade stainless steel, ensuring that your keys remain securely attached to these beautiful, durable miniature works of fiber art.", "cr1.jpg", "Crochet", "Palak Muchhal", 4.2);
-        addP(products, "Everlasting Bouquet", "Bring the beauty of a garden indoors permanently. This hand-knitted bouquet features white lilies and blue cornflowers, meticulously crocheted using premium soft cotton yarn. Each flower is reinforced with a discreet wire, allowing you to pose the stems in a vase. The soft texture and vibrant colors provide a handcrafted charm that real flowers cannot match. An eco-friendly alternative to fresh-cut flowers, it adds a touch of artisanal warmth to any room. The bouquet is designed to never fade or drop petals, making it a perfect low-maintenance centerpiece for a coffee table or a desk.", "cr2.jpg", "Crochet", "Qasim Ali", 4.7);
-        addP(products, "Petal Patchwork", "A cozy crochet cushion with 3D floral designs in soft pink and cream tones. The front features a garden of raised crochet roses and leaves, providing both visual interest and a unique tactile experience. The back is a simple, sturdy crochet stitch for comfort. This pillow is a beautiful way to add texture and a romantic, cottage-core aesthetic to your sofa or bed, handcrafted to last for years of comfort. The inner cushion is made of high-rebound memory foam, ensuring that the decorative exterior is matched by a functional and supportive interior for relaxation.", "cr3.jpg", "Crochet", "Riya Sen", 4.4);
-        addP(products, "Spring Blossom", "A lightweight crochet scarf featuring delicate hand-stitched pink flowers connected by a fine, airy lace pattern. Made from a silk-blend yarn, this scarf is incredibly soft against the skin and perfect for transitional weather. The floral details are added individually, creating a bespoke accessory that elevates any outfit with a touch of feminine charm and artisanal elegance. It is a wearable garden that never fades. The length is generous, allowing for multiple styling options from a simple loop to an intricate wrap, making it a versatile addition to any spring or autumn wardrobe.", "cr4.jpg", "Crochet", "Sahil Khan", 4.0);
-        addP(products, "Starfish Beach Bag", "A cream-colored crochet handbag adorned with a cute pink starfish charm and nautical rope handles. The dense, sturdy stitch ensures the bag holds its shape even when filled with beach essentials. This bag is a perfect blend of functional summer accessory and handmade art. The starfish detail is intricately crocheted to look lifelike, making this bag a standout piece for your next seaside vacation or summer outing. The interior is lined with waterproof fabric, protecting the delicate crochet work from damp towels or sunblock spills while you enjoy your day at the coast.", "cr5.jpg", "Crochet", "Tara Sutaria", 4.6);
-        addP(products, "Sky Blue Dress", "This intricate crochet dress is a masterpiece of wearable art. Hand-hooked using breathable sky-blue cotton yarn, it features a complex lacy pattern that transitions from solid stitches at the bodice to an airy floral mesh at the hem. Perfect for summer garden parties or elegant beach weddings. Because each dress is made by hand, the stitch consistency and alignment are superior. This garment celebrates traditional textile arts in a modern, stylish context. The dress includes a matching soft-silk slip for comfort and coverage, ensuring that the beautiful lace-work remains the star of your ensemble while you feel comfortable all day long.", "cr6.jpg", "Crochet", "Zoya Akhtar", 4.9);
-        addP(products, "Forest Headband", "A dainty crochet headband featuring tiny white flowers and trailing green vines. The base is an elasticated crochet band for a comfortable fit, while the floral details are sewn on by hand. This accessory is perfect for festivals, weddings, or adding a bohemian touch to a casual hairstyle. It evokes the feeling of a forest fairy, making it a favorite for those who love whimsical and nature-inspired handmade jewelry. The materials are all-natural and dyed with eco-friendly vegetable pigments, ensuring that your style is as kind to the environment as it is beautiful to look at.", "cr7.jpg", "Crochet", "Yash Chopra", 4.3);
-        addP(products, "Butterfly Tapestry", "A large-scale crochet wall hanging featuring a colorful and symmetrical butterfly design. The intricate colorwork is achieved through a technique called tapestry crochet, where multiple yarns are carried along. The result is a thick, durable fabric that displays a complex image like a woven rug. This piece brings a bold focal point to any room, celebrating the beauty of nature and the technical skill of the fiber artist. It comes with a hand-polished wooden dowel and a sturdy hanging cord, allowing for immediate and easy installation as the primary art piece in a bedroom or nursery.", "cr8.jpg", "Crochet", "Varun Dhawan", 4.5);
-        addP(products, "Veggie Pouches", "Fun and quirky crochet cases shaped like carrots, peas, and corn. These pouches are perfect for storing pencils, makeup brushes, or small electronics. They feature secure zippers and are lined with soft fabric to protect your belongings. These playful designs are a great way to bring some handmade humor and organization to your desk or bag, showcasing that crochet can be both practical and incredibly fun. The yarn used is a durable acrylic blend that can be easily spot-cleaned, making these pouches a practical choice for students or professionals who want a touch of artisanal fun.", "cr9.jpg", "Crochet", "Udit Narayan", 4.1);
-        addP(products, "Boho Plant Hanger", "A sturdy macrame-style crochet hanger designed to hold your favorite indoor plants with style. Made from heavy-duty cotton cord, the hanger features decorative knots and a long, fringed tassel at the bottom. It can accommodate a variety of pot sizes and adds a beautiful, organic vertical element to your interior design. This piece is perfect for creating an indoor jungle and bringing a touch of boho-chic texture to your windows. The hanger is tested to support up to five kilograms, ensuring that your larger ceramic pots are held safely and securely while adding a layer of handcrafted texture to your home.", "cr10.jpg", "Crochet", "Tushar Kapoor", 4.8);
-
-        // --- CRAFT (c1-c10) ---
-        addP(products, "Enchanted Treehouse", "A whimsical miniature sculpture capturing the magic of a forest sanctuary. Built by hand using natural wood, moss, and wirework, this treehouse features multiple levels and glowing LED windows. Every element, from the hand-carved roof to the miniature furniture inside, is crafted with precision. An enchanting centerpiece for a nursery or office desk, it sparks the imagination and brings a touch of fantasy into the everyday home environment. The LEDs are battery-operated with a discreet switch hidden at the base, providing over fifty hours of magical light. This craft piece represents over eighty hours of meticulous assembly, ensuring every tiny ladder and railing is perfect.", "c1.jpg", "Craft", "Sanjay Leela", 5.0);
-        addP(products, "Crystal Suncatcher", "A hand-crafted hanging decor piece that creates beautiful rainbows whenever sunlight passes through it. Featuring high-lead crystals and delicate wire-wrapped accents, this suncatcher is designed to be hung in a window. The arrangement of prisms is carefully balanced to maximize light refraction. It is a simple yet powerful way to bring a sense of joy and vibrant color into your living space, handcrafted with love and light. The wire used is silver-plated copper, ensuring that the suncatcher maintains its brilliant shine without tarnishing, even when exposed to direct sunlight in a window for years.", "c2.jpg", "Craft", "Rishi Kapoor", 4.4);
-        addP(products, "Butterfly Specimen", "Elegant wire-art butterflies mounted in a minimalist shadow-box frame. The butterflies are shaped from fine copper wire and colored with translucent resins that mimic the iridescent patterns of real wings. This piece offers the beauty of nature's most delicate creatures without the ethical concerns of real taxidermy. It is a modern, sophisticated piece of wall art that adds a touch of light and grace to a contemporary home office or hallway. The frame is made of sustainably sourced ash wood, finished with a clear wax that highlights the natural grain, perfectly complementing the organic forms of the wire-sculpted butterflies inside.", "c3.jpg", "Craft", "Pankaj Kapur", 4.2);
-        addP(products, "Suitcase Dream Room", "A nostalgic miniature bedroom scene meticulously crafted inside a genuine vintage suitcase. Features hand-sewn fabric bedding, tiny paper-bound books on a wooden nightstand, and a miniature mirror. The artist used mixed media including reclaimed wood, lace, and polymer clay to create a sense of lived-in warmth. Designed to be displayed open, it provides a secret world that tells a silent story of rest and wanderlust. An ideal gift for travelers and dreamers. Every miniature book has actual blank pages that can be written in, and the tiny oil lamp at the bedside uses a small watch battery to provide a warm, realistic glow to the scene.", "c4.jpg", "Craft", "Nana Patekar", 4.9);
-        addP(products, "Eco Fairy Cottage", "A creative and sustainable fairy house built entirely from a recycled detergent bottle, transformed with natural bark, stones, and miniature plants. This piece is a testament to the power of upcycling, showing how everyday waste can be turned into a magical work of art. The cottage features tiny windows, a pebble chimney, and a miniature garden around the base, perfect for placing in a real garden or on a windowsill to attract friendly spirits. The materials are weather-sealed with an eco-friendly lacquer, allowing the cottage to live outdoors among real plants and weather without losing its charming details or structural integrity.", "c5.jpg", "Craft", "Manoj Bajpayee", 4.7);
-        addP(products, "Quilled Heart", "Intricate paper quilling art forming a vibrant heart-shaped bouquet of flowers. Thousands of thin paper strips have been rolled, shaped, and glued together to create this stunning 3D image. The level of detail in the tiny petals and swirling leaves is truly remarkable. This artwork is mounted in a deep box frame to protect the delicate paper work, making it a romantic and enduring gift that celebrates the art of patience and precision. The paper used is acid-free and museum-grade, ensuring that the colors remain bright and the structure remains crisp for a lifetime. Each flower represents a different traditional floral symbol, from roses for love to lilies for purity.", "c6.jpg", "Craft", "Savitri Devi", 4.1);
-        addP(products, "Wire Fish Bowl", "A unique desktop decor piece featuring wire-sculpted fish that appear to be swimming in a clear glass bowl filled with blue crystal 'water'. The fish are intricately twisted from colorful aluminum wire, capturing their graceful movement. This no-maintenance aquarium is a perfect conversation starter and a fun piece of modern sculpture for an office or study. It brings the soothing vibe of an underwater world to your desk without the need for feeding. The 'water' is made of high-clarity optical resin that will never yellow, providing a permanent and perfect environment for your artisanal wire fish to swim in forever.", "c7.jpg", "Craft", "Gopal Das", 4.3);
-        addP(products, "Matchbox Memories", "Tiny, incredibly detailed scenes crafted entirely inside sliding matchboxes. From a miniature library with real paper pages to a tiny forest campsite, these matchboxes are a world of wonder in the palm of your hand. They are painted with fine brushes and use magnifying lenses during construction to ensure every microscopic detail is perfect. These boxes are intended as unique collector's items or thoughtful 'pocket' gifts for someone who appreciates the art of the miniature. The exteriors are decorated with vintage-style prints, and each box comes in a small protective display case to ensure that the delicate interior scene is preserved from dust and handling.", "c8.jpg", "Craft", "Ishwar Singh", 4.6);
-        addP(products, "Ocean Shadow Box", "A 3D paper-cut shadow box depicting a serene underwater world with coral reefs, schools of fish, and a majestic whale. The scene is created by layering multiple sheets of hand-cut paper at different depths, which are then backlit by soft LED lights to create a sense of vast ocean volume. This piece serves as both a beautiful wall sculpture and a soothing nightlight, capturing the peaceful majesty of the deep blue sea in paper form. The LEDs have a programmable timer and remote control, allowing you to adjust the brightness and set the box to turn off automatically at night, making it an ideal piece for a relaxing bedroom environment.", "c9.jpg", "Craft", "Meenakshi Jain", 4.5);
-        addP(products, "Tropical Anklet", "A hand-crafted barefoot sandal jewelry piece featuring white plumeria flowers made from lightweight, waterproof resin. Designed to be worn around the ankle and hooked over the toe, it is the perfect accessory for beach weddings or tropical vacations. The intricate beadwork and floral details are inspired by traditional island jewelry, providing a touch of exotic beauty and handcrafted elegance to your summer footwear collection. The chain is made of hypoallergenic titanium, ensuring it won't react with salt water or sand, and the resin flowers are hand-polished to a high shine that perfectly mimics the waxy texture of real tropical blossoms.", "c10.jpg", "Craft", "Harish Verma", 4.0);
-
-        // --- OTHERS (v1-v19) ---
-        addP(products, "Autumn Vine", "A delicate wire-wrapped vine accessory designed to wrap elegantly around your ankle. Made from copper wire with tiny carnelian and amber beads that look like fall leaves. This piece is inspired by the changing seasons and the natural flow of climbing vines. It is fully adjustable and provides a rustic, boho-chic touch to any outfit, handcrafted to be as unique as the person wearing it. The copper is treated with a light tarnish-resistant coating to maintain its warm, autumnal glow, while the beads are hand-selected for their internal clarity and fire, making the 'leaves' appear to capture and hold the sunlight as you move.", "v1.jpg", "Others", "Kavita Reddy", 4.4);
-        addP(products, "Moonlit Bonsai", "A decorative tree sculpture featuring a hand-twisted wire bonsai tree set against a glowing resin moon. The moon contains a soft LED light that illuminates the tiny leaves of the tree from behind, creating a beautiful silhouette at night. The base is made from polished natural stone. This piece is a perfect meditation aid or nightlight, bringing a sense of Zen calm and celestial beauty to your bedroom. The wire used for the tree is a specialized flexible alloy that allows you to slightly adjust the branches, essentially 'pruning' your artisanal bonsai to your own aesthetic preference while enjoying the permanent lunar glow.", "v2.jpg", "Others", "Suresh Prabhu", 4.9);
-        addP(products, "Fairy Lantern", "An enchanting glass jar containing a miniature fairy scene with moss, tiny mushrooms, and a delicate fairy figurine. The jar is filled with 'fairy lights' that can be turned on with a switch, making the whole scene glow magically. This lantern is perfect for a child's nightlight or as a whimsical decor piece for a bookshelf. Each lantern is hand-assembled and unique, creating a little piece of a fairy tale you can hold in your hand. The glass is tempered for safety, and the interior is sealed to ensure the preserved moss remains vibrant and the fairy scene remains undisturbed, providing years of magical illumination to your home.", "v3.jpg", "Others", "Anjali Menon", 4.7);
-        addP(products, "Mini Macrame", "A set of tiny handmade macrame hangings designed as fridge magnets or small wall accents. Made from organic cotton thread with miniature wooden beads, these pieces bring the boho-chic aesthetic to the smallest spaces. Each knot is tied by hand with precision, showcasing the beauty of traditional fiber arts on a micro scale. They are a perfect way to add a touch of handmade warmth to your kitchen or office. The magnets used are heavy-duty neodymium, ensuring that these delicate works of art stay firmly in place on any metallic surface, combining strong functionality with a soft, artisanal aesthetic that brightens up everyday appliances.", "v4.jpg", "Others", "Ramesh Babu", 4.1);
-        addP(products, "Driftwood Chime", "A wall hanging made from naturally weathered driftwood and locally sourced seashells. The pieces are strung on sturdy hemp cord and arranged to create a gentle, clinking sound when moved. This chime brings the peaceful vibe of the ocean into your home, serving as a rustic and organic piece of wall art. It's a celebration of natural materials and beachcombing finds, handcrafted for a one-of-a-kind look. Each piece of driftwood is hand-sanded to ensure it is smooth and safe to touch, while the shells are polished to reveal their hidden iridescent layers, making this chime a tactile and visual tribute to the coastal landscape.", "v5.jpg", "Others", "Shanti Swaroop", 4.2);
-        addP(products, "Gourmet Clock", "A unique wall clock decorated with incredibly realistic polymer clay miniatures of gourmet foods like croissants, cheeses, and fruits. Each tiny food item is hand-sculpted and painted to look exactly like the real thing. This clock is a perfect piece of functional art for a kitchen or dining room, celebrating the love of food and fine craftsmanship. The clock mechanism is silent-sweep, ensuring that your artisanal kitchen decor remains as peaceful as it is appetizing. The miniatures are glazed with a high-gloss finish to mimic the natural sheen of fresh food, making this clock a delicious-looking focal point that will have guests looking twice at your wall.", "v6.jpg", "Others", "Abhay Deol", 4.5);
-        addP(products, "Emerald Ear Cuff", "An intricate wire-wrapped jewelry piece with deep green emerald-colored crystal accents. Designed to wrap around the ear without the need for piercings, this cuff is as comfortable as it is stunning. The design is inspired by elven and fantasy aesthetics, providing a touch of royal elegance to any outfit. The wire is high-grade sterling silver, hand-polished to a mirror finish. This ear cuff is a standout piece of wearable art, perfect for special occasions or adding a magical touch to your everyday style. The crystal drops are faceted to maximize sparkle, ensuring that this piece catches the light with every turn of your head, making you feel truly regal.", "v7.jpg", "Others", "Bipasha Basu", 4.8);
-        addP(products, "Butterfly Hand Chain", "An elegant jewelry piece that connects a delicate ring to a bracelet with a beautiful butterfly motif in the center. Adorned with emerald-green crystals, this hand chain is a unique and romantic accessory. The chain is fine yet sturdy, designed to follow the natural movement of your hand. It's a celebration of nature-inspired beauty and fine jewelry craftsmanship, handcrafted for those who love unique and ethereal accessories. The butterfly is filigreed by hand, creating a light and airy structure that feels weightless on the hand while providing a significant visual impact, making it a favorite for bohemian weddings and summer festivals.", "v8.jpg", "Others", "Chitrangada Singh", 4.6);
-        addP(products, "Crystal Tiara", "A dainty wire-wrapped crown adorned with clear crystal beads that look like fresh dewdrops. This tiara is lightweight and flexible, allowing it to be pinned easily into any hairstyle. It's an ideal accessory for brides, prom, or any occasion where you want to feel like royalty. The crystals are hand-wired onto a slender silver-plated band, creating a delicate and sparkling headpiece that catches the light beautifully. The design is inspired by traditional forest crowns, bringing a touch of organic, magical beauty to your formal ensemble. Each crystal is individually secured with a specialized 'double-twist' technique to ensure that the tiara remains perfectly intact through hours of dancing and celebration.", "v9.jpg", "Others", "Dia Mirza", 4.3);
-        addP(products, "Opalescent Wings", "Stunning wall decor featuring shimmering, iridescent butterfly wings made from light-refracting resins and wire frames. These wings change color as you move around them, moving from deep purples to bright greens. They are designed to be a magical focal point in a bedroom or creative studio, bringing a sense of flight and wonder to your walls. The wings are incredibly lightweight and come with an invisible mounting system, making them appear to float on your wall. The resin is infused with real crushed opal powder, giving the wings a natural, crystalline depth that machine-made plastic decorations simply cannot replicate, providing a high-end artisanal look.", "v10.jpg", "Others", "Emraan Hashmi", 4.7);
-        addP(products, "Jasmine Hand Chain", "A romantic bridal hand accessory featuring delicate white jasmine flowers made from cold-porcelain and silver chains. This hand chain drapes gracefully from the middle finger to the wrist, providing a soft and floral touch to a wedding ensemble. Each flower is hand-formed and painted with subtle gradients to look like a real blossom. It's a timeless piece of jewelry that celebrates the beauty of nature and the special moments of life. The porcelain is treated with a specialized hardener, making the flowers surprisingly durable and resistant to chips, ensuring that this delicate-looking piece can be kept as a cherished heirloom long after the wedding day is over.", "v11.jpg", "Others", "Farhan Akhtar", 4.9);
-        addP(products, "Golden Laurel Cuff", "An adjustable upper-arm bracelet with a classic gold leaf laurel design. Made from hand-hammered brass with a gold-plated finish, this cuff is a bold and sophisticated accessory. The laurel design is a symbol of victory and honor, making this a meaningful as well as beautiful piece of jewelry. It can be easily adjusted to fit any arm size and provides a touch of ancient Grecian elegance to a sleeveless dress or summer outfit. The brass is polished to a high-gold luster and sealed with a skin-safe lacquer to prevent oxidation, ensuring that your golden laurel maintains its radiant, sun-filled shine through years of wear in any climate.", "v12.jpg", "Others", "Gita Bali", 4.2);
-        addP(products, "Penguin Calendar", "A cute and functional wooden desk accessory featuring hand-painted penguin blocks to track the date. This perpetual calendar is a sustainable and charming alternative to paper calendars. Each block is hand-carved from solid pine and painted with eco-friendly acrylics. It's a perfect piece to brighten up an office desk or a child's study area, bringing a touch of handmade joy to your daily organization. The wood is sourced from FSC-certified forests, and the paint is finished with a non-toxic matte sealant, making this a safe and environmentally conscious choice for your home or as a gift for students and penguin lovers of all ages.", "v13.jpg", "Others", "Hrithik Roshan", 4.0);
-        addP(products, "Campfire Miniatures", "A set of tiny miniature stones and a 'burning' campfire made from polymer clay and resin for dollhouses or tabletop games. The campfire features an internal LED that flickers like real flames, providing a cozy and realistic atmosphere to your miniature scenes. Each stone is hand-sculpted to have a unique texture and color. This set is a labor of love for miniature enthusiasts, providing high-quality and realistic details for your tiny worlds. The flickering effect is achieved through a specialized micro-chip that mimics the irregular rhythm of real wood-fire, and the logs are dusted with real ash to ensure the highest possible level of authenticity for your diorama.", "v14.jpg", "Others", "Inder Kumar", 4.4);
-        addP(products, "Artisan Chip Bowl", "A handmade ceramic bowl designed specifically for serving chips and dips. The dip bowl is integrated into the side of the larger bowl, creating a sleek and functional one-piece serving solution. The glaze is a beautiful speckled turquoise, reminiscent of ocean waves. This bowl is as durable as it is beautiful, perfect for entertaining guests with an artisanal touch. The ceramic is high-fire stoneware, making it safe for both the dishwasher and microwave, providing modern convenience without sacrificing the unique, hand-made character of the piece. The rim is hand-smoothed to ensure a comfortable grip, making it the perfect vessel for your next social gathering.", "v15.jpg", "Others", "Juhi Chawla", 4.6);
-        addP(products, "Leafy Tea Infuser", "A beautiful and functional tea infuser featuring a hand-sculpted polymer clay leaf handle that rests on the edge of your cup. The infuser is made of high-quality stainless steel with a fine mesh to ensure a perfect brew every time. This piece makes the ritual of tea-drinking even more special, bringing a touch of nature and handmade art to your morning routine. The clay handle is heat-resistant and ergonomically shaped to be easy to lift, while the stainless steel is easy to clean and won't affect the flavor of your favorite loose-leaf teas. It’s a perfect gift for tea connoisseurs who appreciate the marriage of utility and fine craftsmanship in their daily utensils.", "v16.jpg", "Others", "Karan Kapur", 4.3);
-        addP(products, "English Ivy Stand", "A decorative jewelry rack for earrings shaped like climbing ivy vines. Made from hand-soldered copper wire with green patina accents, this stand is a beautiful way to organize and display your favorite studs and dangles. The 'leaves' of the ivy provide numerous points for hanging earrings, making it a functional and artistic addition to your vanity. The base is a heavy piece of white marble, providing stability and a high-end look that contrasts perfectly with the organic copper vines. This stand turns your jewelry collection into a piece of vertical wall art, ensuring that your favorite accessories are always organized and displayed in a way that highlights their own unique beauty.", "v17.jpg", "Others", "Kailash Kher", 4.1);
-        addP(products, "Pink Coral Tree", "Organize your accessories with this artistic jewelry stand. Shaped like pink reef coral, this stand is hand-sculpted from durable resin with a pearlescent sheen. Numerous branches provide space for hanging necklaces and rings, preventing tangles while displaying jewelry as part of your decor. The weighted base ensures stability. More than an organizer, it is a sculptural accent that adds tropical color and organic elegance to your vanity. It blends functional utility with artisanal appeal. Each branch is hand-finished to ensure there are no sharp edges that could snag delicate jewelry, and the pearlescent finish is applied in multiple layers to capture the shifting light of an underwater coral reef.", "v18.jpg", "Others", "Lara Dutta", 4.5);
-        addP(products, "Calla Lily Candle", "A stunning dual-purpose ceramic sculpture shaped like intertwining Calla Lilies. Functions as a delicate bud vase on one side and a secure tea-light holder on the other. The smooth, matte-white finish mimics velvety lily petals, while hand-painted green stems provide contrast. When lit, the soft glow illuminates the inner curves of the porcelain petals, creating a serene and romantic atmosphere. Perfect for spa-like bathrooms or as a graceful dining centerpiece. The base is felt-lined to protect your furniture surfaces from scratches, and the ceramic is fired at extreme temperatures to ensure it is heat-resistant and safe for use with candles, providing a safe and beautiful ambient lighting solution for your home.", "v19.jpg", "Others", "Om Puri", 4.8);
-
+    protected void saveBatch(List<Product> products) {
         repository.saveAll(products);
     }
 
-    private void addP(List<Product> list, String name, String desc, String img, String cat, String artist, double rating) {
-        Random r = new Random();
-        Product p = new Product(name, desc, (double)(1000 + r.nextInt(4001)), img, cat, artist, rating, 10 + r.nextInt(50), "2-4 Days", "System");
-        list.add(p);
+    // --- Controller Support Methods ---
+    public List<Product> getAllProducts() { return repository.findAll(); }
+    public Product getProductById(Long id) { return repository.findById(id).orElse(null); }
+    public List<Product> getProductsByCategory(String category) { return repository.findByCategory(category); }
+    public List<Product> searchProducts(String query) { return repository.findByNameContainingIgnoreCase(query); }
+    public Product saveProduct(Product product) { return repository.save(product); }
+    public List<Product> getSystemProducts() { return repository.findByUploader("System"); }
+    public List<Product> getUserItems(String email) { return repository.findByUploader(email); }
+    public List<Product> getSharedCreations(String email) { return repository.findByUploaderNotAndUploaderNot("System", email); }
+    public List<Product> getSuggestions(String category, Long excludeId) {
+        return repository.findByCategory(category).stream()
+                .filter(p -> !p.getId().equals(excludeId))
+                .limit(4)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public void deleteProduct(Long id) {
+        reviewRepository.deleteByProductId(id);
+        cartItemRepository.deleteByProductIds(java.util.Collections.singletonList(id));
+        repository.deleteById(id);
     }
 }

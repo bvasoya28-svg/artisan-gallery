@@ -9,6 +9,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Product> findByUploader(String uploader);
     List<Product> findByUploaderNot(String uploader);
     List<Product> findByUploaderNotAndUploaderNot(String u1, String u2);
+    List<Product> findByNameContainingIgnoreCase(String name);
     List<Product> findByNameContainingIgnoreCaseOrDescriptionContainingIgnoreCaseOrCategoryContainingIgnoreCase(String name, String description, String category);
     long countByUploader(String uploader);
     

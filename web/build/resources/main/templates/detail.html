@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title th:text="${product.name} + ' - Artisan Gallery'"></title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <header class="sticky-header">
+        <div class="container header-content">
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <a th:href="@{/home}" style="color: var(--forest-green); font-size: 1.2rem;"><i class="fas fa-chevron-left"></i></a>
+                <div class="logo">
+                    <h1><a th:href="@{/home}">Artisan Gallery</a></h1>
+                </div>
+            </div>
+
+            <div class="user-profile-header" th:if="${user != null}">
+                <span th:text="${user.fullName}">User Name</span>
+                <img th:src="${user.profilePicture != null && user.profilePicture.startsWith('http') ? user.profilePicture : (user.profilePicture != null ? 'https://res.cloudinary.com/dpt2wn9lh/image/upload/' + (user.profilePicture.contains('.') ? user.profilePicture.substring(0, user.profilePicture.lastIndexOf('.')) : user.profilePicture) : '/images/default-profile.png')}" alt="Profile">
+            </div>
+        </div>
+    </header>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="bottom-nav">
+        <a th:href="@{/home}" class="bottom-nav-item">
+            <i class="fas fa-home"></i>
+            <span>Home</span>
+        </a>
+
+        <a th:href="@{/search}" class="bottom-nav-item">
+            <i class="fas fa-search"></i>
+            <span>Search</span>
+        </a>
+
+        <a th:href="@{/cart}" class="bottom-nav-item">
+            <i class="fas fa-shopping-cart"></i>
+            <span>Cart</span>
+        </a>
+
+        <a th:href="@{/account}" class="bottom-nav-item">
+            <i class="fas fa-user-circle"></i>
+            <span>Account</span>
+        </a>
+    </nav>
+
+
+    <div class="container sub-page-container">
+        <div style="display: flex; gap: 60px; align-items: flex-start; margin-top: 20px;">
+            <!-- 60% Image Column -->
+            <div style="flex: 0 0 60%; position: relative;">
+                <img th:src="${product.imageUrl.startsWith('http') ? product.imageUrl : '/images/' + product.imageUrl}" th:alt="${product.name}"
+                     style="width: 100%; border-radius: 20px; box-shadow: var(--shadow);">
+
+                <!-- Badge for System Products or Other Artists -->
+                <div th:if="${user == null || user.email != product.uploader}" style="position: absolute; top: 20px; right: 20px; z-index: 10;">
+                    <span th:if="${product.inStock}" style="background: #2d5a27; color: white; padding: 8px 15px; border-radius: 20px; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.2); font-size: 0.9rem;">
+                        <i class="fas fa-check-circle"></i> IN STOCK
+                    </span>
+                    <span th:if="${!product.inStock}" style="background: #d63031; color: white; padding: 8px 15px; border-radius: 20px; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.2); font-size: 0.9rem;">
+                        <i class="fas fa-times-circle"></i> OUT OF STOCK
+                    </span>
+                </div>
+            </div>
+
+            <!-- 40% Info Column -->
+            <div style="flex: 0 0 40%;">
+                <h1 class="serif-font" style="font-size: 3rem; margin: 0 0 10px 0; color: var(--text-color);" th:text="${product.name}"></h1>
+                <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 20px;">
+                    <p style="color: var(--tan); font-size: 1.3rem; font-weight: 600; margin: 0;" th:text="'by ' + ${product.artist}"></p>
+                    <span th:if="${product.locationType == 'Local'}" style="background: #fff3e0; color: #e65100; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; border: 1px solid #ffe0b2;">
+                        <i class="fas fa-map-marker-alt"></i> Ships from [[${product.specificLocation}]]
+                    </span>
+                    <span th:if="${product.locationType == 'National'}" style="background: #e3f2fd; color: #1565c0; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; border: 1px solid #bbdefb;">
+                        <i class="fas fa-globe"></i> Ships Nationwide (India)
+                    </span>
+                </div>
+
+                <div style="font-size: 2.5rem; color: var(--forest-green); font-weight: bold; margin-bottom: 30px;">
+                    ₹[[${#numbers.formatDecimal(product.price, 0, 'COMMA', 2, 'POINT')}]]
+                </div>
+
+                <div style="margin-bottom: 40px; line-height: 1.8; color: #555;">
+                    <h3 class="serif-font" style="color: var(--forest-green); margin-bottom: 10px;">The Artisan's Story</h3>
+                    <p th:text="${product.description}"></p>
+                </div>
+
+                <div th:if="${product.inStock}">
+                    <form th:action="@{/cart/add}" method="post" style="margin-bottom: 15px;">
+                        <input type="hidden" name="productId" th:value="${product.id}">
+                        <button type="submit" class="btn-primary" style="width: 100%; font-size: 1.2rem; padding: 18px;">Add to Shopping Bag</button>
+                    </form>
+                    <a th:href="@{'/checkout/buy-now/' + ${product.id}}" class="btn-accent" style="width: 100%; font-size: 1.2rem; padding: 18px; box-sizing: border-box; display: block; text-align: center; text-decoration: none;">Buy It Now</a>
+
+                    <!-- Only show In Stock status below buttons for User's Own Uploaded Products -->
+                    <div th:if="${user != null && user.email == product.uploader}" style="margin-top: 15px; text-align: center; color: #2d5a27; font-weight: bold; font-size: 0.9rem; background: #e8f5e9; padding: 8px; border-radius: 8px;">
+                        <i class="fas fa-check-circle"></i> This item is currently In Stock
+                    </div>
+                </div>
+
+                <div th:if="${!product.inStock}">
+                    <button class="btn-primary" style="background: #ccc; cursor: not-allowed; width: 100%; font-size: 1.2rem; padding: 18px;" disabled>Out of Stock</button>
+
+                    <!-- Only show Out of Stock status below buttons for User's Own Uploaded Products -->
+                    <div th:if="${user != null && user.email == product.uploader}" style="margin-top: 15px; text-align: center; color: #d63031; font-weight: bold; font-size: 0.9rem; background: #ffebee; padding: 8px; border-radius: 8px;">
+                        <i class="fas fa-times-circle"></i> This item is currently Out of Stock
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Suggested Items Section -->
+        <section style="margin-top: 80px; padding-top: 50px; border-top: 1px solid #eee;">
+            <h2 class="serif-font" style="color: var(--forest-green); margin-bottom: 30px;">You Might Also Love</h2>
+            <div class="product-grid">
+                <div th:each="p : ${suggestions}" class="product-card" style="position: relative;">
+                    <!-- Stock Status Badge -->
+                    <div style="position: absolute; top: 10px; right: 10px; z-index: 2;">
+                        <span th:if="${p.inStock}" style="background: #2d5a27; color: white; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+                            IN STOCK
+                        </span>
+                        <span th:if="${!p.inStock}" style="background: #d63031; color: white; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+                            OUT OF STOCK
+                        </span>
+                    </div>
+
+                    <a th:href="@{'/product/' + ${p.id}}" style="text-decoration: none; color: inherit;">
+                        <div class="product-image-container">
+                            <img th:src="${p.imageUrl.startsWith('http') ? p.imageUrl : '/images/' + p.imageUrl}" th:alt="${p.name}" th:style="${!p.inStock ? 'filter: grayscale(0.8) opacity(0.7);' : ''}">
+                        </div>
+                        <h3 th:text="${p.name}"></h3>
+                        <p class="seller">by [[${p.artist}]]</p>
+                        <div class="price-rating">
+                            <span class="price">₹[[${#numbers.formatDecimal(p.price, 0, 'COMMA', 2, 'POINT')}]]</span>
+                            <span class="rating">
+                                <i class="fas fa-star" th:each="i : ${#numbers.sequence(1, 5)}" th:style="${i <= (p.rating != null ? p.rating : 5) ? 'color: var(--tan)' : 'color: #ddd'}"></i>
+                            </span>
+                        </div>
+                    </a>
+                </div>
+            </div>
+            <div th:if="${#lists.isEmpty(suggestions)}" style="text-align: center; color: #777; padding: 40px; background: #f9f9f9; border-radius: 15px;">
+                <p>Looking for more unique pieces? Try exploring our categories!</p>
+            </div>
+        </section>
+
+        <!-- Reviews Section -->
+        <section style="margin-top: 80px; padding-top: 50px; border-top: 1px solid #eee;">
+            <h2 class="serif-font" style="color: var(--forest-green); margin-bottom: 40px;">Artisan Reviews</h2>
+
+            <div th:each="rev : ${reviews}" style="background: white; padding: 30px; border-radius: 15px; box-shadow: var(--shadow); margin-bottom: 30px; border: 1px solid #f0f0f0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <div>
+                        <strong th:text="${rev.userName}" style="font-size: 1.1rem;"></strong>
+                        <span class="status-pill success" style="margin-left: 10px;"><i class="fas fa-check-circle"></i> Verified Collector</span>
+                    </div>
+                    <div class="star-rating">
+                        <i class="fas fa-star" th:each="i : ${#numbers.sequence(1, 5)}" th:style="${i <= rev.rating ? 'color: var(--tan)' : 'color: #ddd'}"></i>
+                    </div>
+                </div>
+                <p th:text="${rev.comment}" style="line-height: 1.6; color: #444; margin-bottom: 0;"></p>
+                <div th:if="${rev.imageUrl != null && !rev.imageUrl.isEmpty()}" style="margin-top: 20px;">
+                    <img th:src="${rev.imageUrl.startsWith('http') ? rev.imageUrl : '/images/' + rev.imageUrl}"
+                         style="max-width: 100%; border-radius: 12px; box-shadow: var(--shadow); display: block;"
+                         alt="Review Photo">
+                </div>
+                <div th:if="${user != null && user.email == rev.userEmail}" style="margin-top: 15px; text-align: right;">
+                    <form th:action="@{/product/review/delete}" method="POST">
+                        <input type="hidden" name="reviewId" th:value="${rev.id}">
+                        <input type="hidden" name="productId" th:value="${product.id}">
+                        <button type="submit" style="background: none; border: none; color: #d63031; cursor: pointer; font-size: 0.85rem;"><i class="fas fa-trash"></i> Delete Review</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Review Form -->
+            <div style="margin-top: 60px; background: #fff; padding: 40px; border-radius: 15px; border: 2px dashed var(--tan);">
+                <h3 class="serif-font" style="color: var(--forest-green); margin-bottom: 25px;">Review this Masterpiece</h3>
+                <form th:action="@{/product/review}" method="post" enctype="multipart/form-data">
+                    <input type="hidden" name="productId" th:value="${product.id}">
+
+                    <div class="form-group">
+                        <label>Your Rating</label>
+                        <div class="star-input">
+                            <input type="radio" id="star5" name="rating" value="5" required/><label for="star5" title="5 stars"><i class="fas fa-star"></i></label>
+                            <input type="radio" id="star4" name="rating" value="4"/><label for="star4" title="4 stars"><i class="fas fa-star"></i></label>
+                            <input type="radio" id="star3" name="rating" value="3"/><label for="star3" title="3 stars"><i class="fas fa-star"></i></label>
+                            <input type="radio" id="star2" name="rating" value="2"/><label for="star2" title="2 stars"><i class="fas fa-star"></i></label>
+                            <input type="radio" id="star1" name="rating" value="1"/><label for="star1" title="1 star"><i class="fas fa-star"></i></label>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Your Thoughts</label>
+                        <textarea name="comment" class="form-control" style="height: 120px;" placeholder="Tell us about the craftsmanship..." required></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label><i class="fas fa-camera"></i> Upload a Photo (Optional)</label>
+                        <input type="file" name="image" class="form-control">
+                    </div>
+
+                    <button type="submit" class="btn-primary" style="padding: 12px 40px;">Submit Review</button>
+                </form>
+            </div>
+        </section>
+    </div>
+</body>
+</html>

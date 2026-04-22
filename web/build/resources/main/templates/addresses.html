@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Addresses - Artisan Gallery</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <header class="sticky-header">
+        <div class="container header-content">
+            <div class="logo">
+                <h1><a th:href="@{/home}">Artisan Gallery</a></h1>
+            </div>
+
+            <div class="header-search">
+                <form th:action="@{/home}" method="get">
+                    <input type="text" name="search" placeholder="Search for masterpieces...">
+                    <button type="submit">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </form>
+            </div>
+
+            <nav class="nav-menu">
+                <a th:href="@{/sell}" class="nav-link">Sell</a>
+                <a th:href="@{/cart}" class="nav-link">Cart</a>
+                <div class="dropdown">
+                    <a href="javascript:void(0)" class="nav-link">Hello, [[${session.userName ?: 'Guest'}]] <i class="fas fa-chevron-down" style="font-size: 0.7rem;"></i></a>
+                    <div class="dropdown-content">
+                        <a th:href="@{/account}">My Account</a>
+                        <a th:href="@{/account/orders}">My Orders</a>
+                        <a th:href="@{/account/logout}">Logout</a>
+                    </div>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container" style="padding-top: 40px;">
+        <a th:href="@{/account}" class="back-link"><i class="fas fa-arrow-left"></i> Back to Account</a>
+
+        <div class="centered-form-wrapper">
+            <h1 class="serif-font" style="color: var(--forest-green); margin-bottom: 20px;">Shipping Address</h1>
+
+            <hr>
+
+            <p th:if="${param.success}" style="color: var(--forest-green); font-weight: bold; margin-bottom: 20px;">✓ Address updated successfully!</p>
+
+            <form th:action="@{/account/addresses/update}" method="post">
+                <div style="margin-bottom: 25px;">
+                    <label style="display: block; margin-bottom: 10px; font-weight: bold;">Full Address</label>
+                    <textarea name="address" style="width: 100%; height: 120px; padding: 15px; border-radius: 8px; border: 1px solid #ddd; font-family: inherit;"
+                              placeholder="Enter your full street address, city, and zip code..." th:text="${user.address}"></textarea>
+                </div>
+                <button type="submit" class="btn-primary">Save Address</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
