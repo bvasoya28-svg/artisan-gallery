@@ -108,8 +108,19 @@ public class ProductService {
     }
 
     @org.springframework.context.event.EventListener(org.springframework.boot.context.event.ApplicationReadyEvent.class)
-    @Transactional
     public void initData() {
+        try {
+            System.out.println(">>> [STARTUP] Beginning catalog initialization...");
+            performInit();
+            System.out.println(">>> [STARTUP] Initialization complete!");
+        } catch (Exception e) {
+            System.err.println(">>> [ERROR] Critical failure during catalog initialization: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    @Transactional
+    public void performInit() {
         System.out.println(">>> [CATALOG CHECK] Verifying system items...");
         List<Product> systemProducts = repository.findByUploader("System");
         
