@@ -54,8 +54,13 @@ public class ProductService {
         Map<String, Product> existingByImgId = new HashMap<>();
         for (Product p : systemProducts) {
             if (p.getImageUrl() != null && p.getImageUrl().contains("/")) {
-                String imgId = p.getImageUrl().substring(p.getImageUrl().lastIndexOf("/") + 1);
-                existingByImgId.put(imgId, p);
+                String url = p.getImageUrl();
+                String imgId = url.substring(url.lastIndexOf("/") + 1);
+                // Clean up extension if present
+                if (imgId.contains(".")) {
+                    imgId = imgId.substring(0, imgId.lastIndexOf("."));
+                }
+                existingByImgId.put(imgId.toLowerCase(), p);
             }
         }
         
@@ -63,13 +68,13 @@ public class ProductService {
         String baseUrl = "https://res.cloudinary.com/dpt2wn9lh/image/upload/";
 
         java.util.function.BiConsumer<String, String[]> updater = (name, data) -> {
-            String imgId = data[1];
+            String imgId = data[1].toLowerCase();
             // Find existing product by its Image ID, or create new if it doesn't exist
             Product p = existingByImgId.getOrDefault(imgId, new Product());
             
             p.setName(name);
             p.setDescription(data[0]);
-            p.setImageUrl(baseUrl + imgId);
+            p.setImageUrl(baseUrl + data[1]); // Keep original case for URL
             p.setCategory(data[2]);
             p.setArtist(data[3]);
             p.setRating(Double.parseDouble(data[4]));
@@ -84,8 +89,6 @@ public class ProductService {
             toSave.add(p);
         };
 
-        // --- CORRECTED MAPPINGS & LONG DESCRIPTIONS ---
-
         // PAINTINGS (p1-p10)
         updater.accept("Harvest Bounty Still Life", new String[]{"This exquisite oil painting captures the vibrant essence of a fresh harvest. Every brushstroke meticulously details the texture of ripened fruits, from the velvety skin of peaches to the glistening surface of grapes. It is a timeless masterpiece that brings the warmth and abundance of nature into any living space, serving as a focal point of artistic elegance and classical beauty.", "p1", "Paintings", "Anita Sharma", "4.8", "false"});
         updater.accept("The Valiant Knight's Vow", new String[]{"Step back into a world of chivalry and romance with this classical masterpiece. The painting depicts a noble knight in a moment of solemn devotion, rendered with a rich palette and dramatic lighting that evokes the grandeur of historical epics. It is an ideal piece for collectors who appreciate traditional storytelling and the fine detail of classical art techniques and oil painting mastery.", "p2", "Paintings", "Rajesh Kumar", "4.5", "true"});
@@ -98,7 +101,7 @@ public class ProductService {
         updater.accept("Legendary Voyage into Unknown", new String[]{"This adventurous painting depicts a majestic ship navigating through a colossal sea cave. The contrast between the dark, towering rock formations and the sunlit opening of the cave creates a dramatic sense of scale and wonder. It is a powerful representation of discovery and the human spirit's desire to explore the furthest reaches of the world and maritime history.", "p9", "Paintings", "Arjun Reddy", "4.7", "true"});
         updater.accept("Bioluminescent Mystic Forest", new String[]{"Experience the magic of an enchanted woodland with this bioluminescent forest art. The painting features glowing flora and fauna that illuminate the dark forest floor, creating a dreamlike and otherworldly atmosphere. It is a unique and captivating piece that transforms any room into a gateway to a world of fantasy and natural wonder, perfect for meditation and calm.", "p10", "Paintings", "Ishani Bose", "4.6", "true"});
 
-        // OTHERS / KITCHEN (v1-v13)
+        // KITCHEN (v1-v13)
         updater.accept("Verdant Leafy Tea Infuser", new String[]{"Make your tea time more enjoyable with this charming leafy tea infuser. Crafted from high-quality, food-grade silicone, it is designed to look like a fresh sprout emerging from your cup. It is easy to clean, durable, and perfect for loose leaf tea lovers who appreciate a touch of nature-inspired design in their daily kitchen essentials and sustainable living habits.", "v1", "Others", "Karan Kapur", "4.7", "true"});
         updater.accept("Classic English Breakfast Set", new String[]{"Start your morning with elegance using this handcrafted ceramic breakfast set. The set includes a perfectly sized mug, a bowl, and a side plate, all featuring a timeless minimalist design and a smooth, glazed finish. It is durable enough for everyday use yet stylish enough to impress guests during a weekend brunch or a quiet morning at home with your favorite meal.", "v2", "Others", "Kaira Advani", "4.5", "true"});
         updater.accept("Artisanal Blue Ceramic Teapot", new String[]{"This beautiful blue ceramic teapot is a testament to artisanal craftsmanship. Its unique textured surface and deep cobalt hue make it a standout piece for any tea service. Designed for both beauty and functionality, it features an ergonomic handle and a drip-free spout, ensuring a perfect pour every time you host a tea party or enjoy a relaxing afternoon cup.", "v3", "Others", "Suresh Raina", "4.8", "true"});
@@ -113,7 +116,7 @@ public class ProductService {
         updater.accept("Terracotta Traditional Bread Warmer", new String[]{"Keep your rolls and bread warm throughout dinner with this terracotta warming stone. Simply heat the stone in your oven and place it at the bottom of a bread basket. The natural terracotta retains heat exceptionally well, ensuring your baked goods stay soft and delicious from the first bite to the last, making it an essential for hosting family dinners.", "v12", "Others", "Mohammed Shami", "4.6", "true"});
         updater.accept("Hand-Woven Cotton Table Runner", new String[]{"Elevate your dining experience with this beautiful hand-woven cotton table runner. Featuring intricate patterns and a soft, natural texture, it adds a layer of warmth and sophistication to any table setting. Whether for a formal dinner party or a casual family meal, this runner provides a stylish foundation for your tableware and enhances your home decor.", "v13", "Others", "Ravindra Jadeja", "4.4", "true"});
 
-        // CRAFT & DECOR (c1-c10, v14, v16-v19)
+        // DECOR & CRAFT (c1-c10, v14-v19)
         updater.accept("Boho Macrame Dream Wall Hanging", new String[]{"Create a cozy and inviting atmosphere with this handcrafted macrame wall hanging. Intricately knotted from natural cotton rope, it features a beautiful bohemian design that adds texture and visual interest to any wall. It is a perfect statement piece for a bedroom, living room, or nursery, bringing a sense of handmade warmth and artistic flair to your home.", "c1", "Craft", "Ishaan Khatter", "4.8", "true"});
         updater.accept("Artisanal Lavender Scented Candle", new String[]{"Relax and unwind with the soothing aroma of this artisanal lavender scented candle. Hand-poured using premium soy wax and natural essential oils, it provides a clean and long-lasting burn. The minimalist glass jar design fits seamlessly into any decor, making it a thoughtful gift for yourself or a loved one in need of tranquility and stress relief.", "c2", "Craft", "Ananya Panday", "4.6", "true"});
         updater.accept("Woven Seagrass Storage Basket", new String[]{"Declutter your space with this versatile and stylish woven seagrass basket. Hand-crafted from sustainable materials, it is both durable and lightweight, perfect for storing blankets, toys, or magazines. The natural texture and earthy tones add a touch of organic beauty to any room while keeping your essentials organized and easily accessible in a stylish way.", "c3", "Craft", "Sara Ali Khan", "4.5", "true"});
@@ -125,13 +128,8 @@ public class ProductService {
         updater.accept("Sculptural Industrial Iron Lamp", new String[]{"Make a bold statement with this sculptural iron lamp featuring an industrial-inspired design. The rugged iron base and unique silhouette create a striking visual impact, perfect for an office or a modern living space. It provides warm, ambient lighting while serving as a conversation piece that showcases a love for unique, handcrafted, and industrial lighting solutions.", "c9", "Craft", "Ranveer Singh", "4.5", "true"});
         updater.accept("Vintage Botanical Framed Print", new String[]{"Bring the beauty of nature indoors with this vintage-style botanical framed print. The artwork features detailed illustrations of flora, captured with a sense of historical charm and scientific precision. It is professionally framed and ready to hang, making it an easy way to add a touch of classic natural beauty and artistic history to your study, kitchen, or hallway.", "c10", "Craft", "Deepika Padukone", "4.2", "true"});
         updater.accept("Complete DIY Terrarium Kit", new String[]{"Create your own miniature indoor garden with this complete DIY terrarium kit. The kit includes everything you need: a glass container, soil, pebbles, charcoal, and a variety of easy-to-care-for succulents or moss. It is a fun and rewarding project that allows you to bring a piece of nature into your home and enjoy the therapeutic benefits of indoor gardening and art.", "v14", "Craft", "Vicky Kaushal", "4.8", "true"});
-        
-        // FIX FOR v15 - "Bite Me" bowl
         updater.accept("\"Bite Me\" French Fry Ceramic Bowl", new String[]{"Add a touch of humor and personality to your snack time with this unique 'Bite Me' French fry bowl. Hand-painted with vibrant colors and a quirky design, this ceramic bowl is perfect for holding your favorite finger foods. It is a conversation starter at parties and a delightful gift for anyone who loves whimsical kitchenware and artisanal pottery with a modern twist.", "v15", "Pottery", "Katrina Kaif", "4.4", "true"});
-        
-        // FIX FOR v17 - Jewelry Stand (The one in the screenshot)
         updater.accept("Vine-Enchanted Ceramic Jewelry Stand", new String[]{"Organize your precious jewelry with this stunning Vine-Enchanted Ceramic Stand. Meticulously handcrafted, it features an elegant arched design adorned with hand-painted climbing vines. The built-in holes and ridges provide ample space for earrings, necklaces, and rings, transforming your vanity into a display of artistic botanical beauty. This piece is both a functional organizer and a work of ceramic art.", "v17", "Craft", "Shraddha Kapoor", "4.7", "true"});
-        
         updater.accept("Floating Oak Wooden Wall Shelf", new String[]{"Showcase your favorite decor pieces on this elegant floating oak wall shelf. Crafted from solid oak with a smooth, natural finish, it provides a sturdy and stylish platform for books, plants, or photos. The hidden mounting system creates a clean, modern look that maximizes your wall space while adding the warmth and beauty of real wood and artisanal woodworking.", "v18", "Craft", "Varun Dhawan", "4.5", "true"});
         updater.accept("Vintage Metal Decorative Lantern", new String[]{"Create a warm and cozy glow with this vintage-style metal decorative lantern. Featuring intricate cut-out patterns and a distressed finish, it casts beautiful shadows when a candle is placed inside. It is a versatile piece that can be used as a centerpiece for a dining table or as an atmospheric accent on a patio or fireplace mantel for evenings at home.", "v19", "Craft", "Kriti Sanon", "4.6", "true"});
 
@@ -139,14 +137,12 @@ public class ProductService {
         updater.accept("Silver Moonstone Artisan Ring", new String[]{"This stunning sterling silver ring features a luminous moonstone, known for its ethereal glow and calming energy. Each ring is handcrafted with a delicate band that highlights the natural beauty of the gemstone. It is a perfect accessory for those who appreciate minimalist design and the unique qualities of natural stones, making it a meaningful addition to any jewelry collection.", "cr1", "Crochet", "Sonam Kapoor", "4.9", "true"});
         updater.accept("18k Gold Filigree Earrings", new String[]{"Elevate your look with these exquisitely crafted 18k gold-plated filigree earrings. The intricate lace-like patterns are achieved through traditional metalworking techniques, resulting in a design that is both lightweight and visually striking. These earrings are perfect for adding a touch of sophisticated elegance to a formal outfit or for elevating a casual everyday ensemble with artisanal charm.", "cr2", "Crochet", "Kareena Kapoor", "4.7", "true"});
         updater.accept("Classic Freshwater Pearl Pendant", new String[]{"Celebrate timeless beauty with this classic freshwater pearl pendant necklace. The single, high-luster pearl is suspended from a delicate sterling silver chain, creating a look that is elegant and versatile. It is a perfect piece for everyday wear or for special occasions, serving as a subtle yet sophisticated statement of grace and refined taste in high-quality jewelry.", "cr3", "Crochet", "Priyanka Chopra", "4.8", "true"});
-        updater.accept("Multi-Strand Beaded Boho Bracelet", new String[]{"Add a pop of color and a bohemian vibe to your wrist with this multi-strand beaded bracelet. Hand-strung with a variety of colorful glass and wooden beads, it features a unique combination of textures and patterns. This bracelet is designed to be layered or worn alone, making it a fun and expressive accessory for any free-spirited fashion enthusiast and art lover.", "cr4", "Crochet", "Shraddha Kapoor", "4.4", "true"});
+        updater.accept("Multi-Strand Beaded Boho Bracelet", new String[]{"Add a pop of color and a bohemian vibe to your wrist with this multi-strand beaded bracelet. Hand-stung with a variety of colorful glass and wooden beads, it features a unique combination of textures and patterns. This bracelet is designed to be layered or worn alone, making it a fun and expressive accessory for any free-spirited fashion enthusiast and art lover.", "cr4", "Crochet", "Shraddha Kapoor", "4.4", "true"});
         updater.accept("Pure Hammered Copper Cuff", new String[]{"Make a statement with this bold and rustic hammered copper cuff. Handcrafted from pure copper, each piece features a unique texture created through traditional hammering techniques. Copper is believed by many to have healing properties, making this cuff not only a stylish accessory but also a meaningful one that develops a beautiful and unique patina over time with wear.", "cr5", "Crochet", "Tiger Shroff", "4.3", "true"});
         updater.accept("Green Emerald Silver Studs", new String[]{"These elegant silver stud earrings feature vibrant green emeralds, adding a touch of luxury and color to your ears. The stones are carefully set in high-quality sterling silver, ensuring durability and a timeless appeal. These studs are perfect for adding a subtle spark of color to your professional attire or for a special night out, making them a versatile staple in your accessory collection.", "cr6", "Crochet", "Varun Dhawan", "4.6", "true"});
         updater.accept("Chunky Turquoise Statement Necklace", new String[]{"Stand out from the crowd with this chunky turquoise statement necklace. The necklace features large, raw turquoise stones that showcase the natural variations in color and texture of this beloved gemstone. It is a bold and earthy piece that adds a touch of Southwestern charm and a powerful focal point to any simple outfit, perfect for making a memorable impression.", "cr7", "Crochet", "Sidharth Malhotra", "4.5", "true"});
         updater.accept("Teardrop Amethyst Drop Earrings", new String[]{"Add a touch of regal elegance with these beautiful teardrop amethyst drop earrings. The deep purple amethyst stones are cut to a perfect teardrop shape and suspended from delicate silver wires. These earrings catch the light beautifully, making them an ideal choice for special events where you want to add a sense of sophistication and refined color to your look.", "cr8", "Crochet", "Kiara Advani", "4.7", "true"});
         updater.accept("Dainty Rose Gold Initial Ring", new String[]{"Personalize your jewelry collection with this dainty rose gold initial ring. Crafted with a thin, elegant band and a precisely rendered initial, it is a perfect piece for layering or wearing as a subtle personal statement. The warm rose gold finish adds a touch of modern romance and makes it a thoughtful and personalized gift for a friend or loved one on any occasion.", "cr9", "Crochet", "Kriti Sanon", "4.2", "true"});
-        
-        // FIX FOR cr10 - Macrame Hanger (User mentioned it was mixed up)
         updater.accept("Boho-Chic Macrame Plant Hanger", new String[]{"Elevate your indoor jungle with this Boho-Chic Macrame Plant Hanger. Hand-knotted with premium natural cotton cord, it features intricate diamond patterns and a sturdy wooden ring for easy hanging. Designed to accommodate various pot sizes, this hanger adds a touch of bohemian elegance and vertical dimension to your living space, making it a favorite for plant enthusiasts.", "cr10", "Craft", "Hrithik Roshan", "4.5", "true"});
 
         // POTTERY (po1-po10)
