@@ -146,18 +146,15 @@ public class ProductService {
 
         System.out.println(">>> [REFRESH REQUIRED] Reason: " + (systemProducts.isEmpty() ? "No items" : "Short descriptions detected"));
         
-        // 1. Delete associated data first to avoid FK constraints (Reviews and Cart Items)
-        for (Product p : systemProducts) {
-            reviewRepository.deleteByProductId(p.getId());
-            // Need to handle cart items carefully as they belong to various users
-            // We'll delete any cart item pointing to this system product
-            List<com.artisan.gallery.model.CartItem> allCartItems = cartItemRepository.findAll();
-            for (com.artisan.gallery.model.CartItem item : allCartItems) {
-                if (item.getProduct() != null && item.getProduct().getId().equals(p.getId())) {
-                    cartItemRepository.delete(item);
-                }
+        // 1. Bulk Delete associated data to avoid FK constraints and timeouts
+        List<Long> systemIds = systemProducts.stream().map(Product::getId).toList();
+        if (!systemIds.isEmpty()) {
+            for (Long id : systemIds) {
+                reviewRepository.deleteByProductId(id);
             }
+            cartItemRepository.deleteByProductIds(systemIds);
         }
+
         cartItemRepository.flush();
         reviewRepository.flush();
         
