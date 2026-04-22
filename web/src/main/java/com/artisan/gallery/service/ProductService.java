@@ -26,7 +26,7 @@ public class ProductService {
     private ReviewRepository reviewRepository;
 
     @Autowired
-    private ProductService self;
+    private org.springframework.beans.factory.ObjectProvider<ProductService> selfProvider;
 
     @org.springframework.context.event.EventListener(org.springframework.boot.context.event.ApplicationReadyEvent.class)
     public void initData() {
@@ -34,7 +34,10 @@ public class ProductService {
             try {
                 Thread.sleep(10000); 
                 System.out.println(">>> [STARTUP] Syncing 59 system items to restore images...");
-                self.performSafeUpdate();
+                ProductService self = selfProvider.getIfAvailable();
+                if (self != null) {
+                    self.performSafeUpdate();
+                }
                 System.out.println(">>> [STARTUP] All items are now up to date!");
             } catch (Exception e) {
                 System.err.println(">>> [ERROR] Refresh failed: " + e.getMessage());
@@ -51,13 +54,13 @@ public class ProductService {
                 .collect(Collectors.toMap(Product::getName, p -> p, (p1, p2) -> p1));
         
         List<Product> toSave = new ArrayList<>();
-        String baseUrl = "https://res.cloudinary.com/dph6v9re2/image/upload/";
+        String baseUrl = "/images/";
 
         java.util.function.BiConsumer<String, String[]> updater = (name, data) -> {
             Product p = existingMap.getOrDefault(name, new Product());
             p.setName(name);
             p.setDescription(data[0]);
-            p.setImageUrl(baseUrl + data[1] + ".jpg?v=2");
+            p.setImageUrl(baseUrl + data[1] + ".jpg");
             p.setCategory(data[2]);
             p.setArtist(data[3]);
             p.setRating(Double.parseDouble(data[4]));
