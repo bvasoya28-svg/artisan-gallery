@@ -175,6 +175,7 @@ public class ProductService {
         updater.accept("Midnight Landscape Artisan Plate", new String[]{"This stunning decorative ceramic plate features a hand-painted night landscape inspired by classical starry skies. The swirling clouds, glowing moon, and silhouette of a lonely tree create a sense of peace and wonder. It is a perfect piece for wall display or as a centerpiece, showcasing the artist's mastery of color and nocturnal storytelling.", "po10", "Pottery", "Pratik Gandhi", "4.4", "true"});
 
         repository.saveAll(toSave);
+        repository.flush(); // Force immediate write to database
 
         // Delete any orphan "System" products that were not updated (including v16/Shahid)
         Set<Long> savedIds = toSave.stream().map(Product::getId).filter(Objects::nonNull).collect(Collectors.toSet());
