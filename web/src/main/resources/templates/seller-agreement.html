@@ -38,35 +38,41 @@
             <h1 class="serif-font" style="color: var(--forest-green);">Artisan Seller Agreement</h1>
             <p>Please read our terms of service carefully before listing your items.</p>
 
-            <div id="terms-area" class="terms-area" th:style="${user.sellerTermsAccepted} ? 'max-height: none;' : ''">
-                <h3>1. Product Authenticity</h3>
+            <div id="terms-area" class="terms-area" th:style="${user.sellerTermsAccepted} ? 'max-height: none;' : 'max-height: 400px; overflow-y: auto; background: #fafafa; padding: 20px; border-radius: 12px; border: 1px solid #eee; margin-bottom: 20px;'" onscroll="checkScroll()">
+                <h3 class="serif-font" style="color: var(--forest-green);">1. Product Authenticity</h3>
                 <p>All items must be 100% handmade or uniquely crafted by you. Mass-produced or resale items are strictly prohibited.</p>
 
-                <h3>2. Service Commission & Fees</h3>
+                <h3 class="serif-font" style="color: var(--forest-green);">2. Service Commission & Fees</h3>
                 <p>To support the gallery's operations, the first 5 product uploads for every artisan are <strong>completely free</strong>. After reaching this limit, a <strong>5% service commission</strong> will be applied to all subsequent sales, which will be transferred to the company to maintain your premium visibility.</p>
 
-                <h3>3. Slot Policy (Important)</h3>
+                <h3 class="serif-font" style="color: var(--forest-green);">3. Slot Policy (Important)</h3>
                 <p>Each seller is granted 5 listing slots. <strong>Deleting an item does NOT reset your slot count.</strong> For example, if you upload 5 items and delete 1, your usage remains at 5/5. This ensures the platform remains a curated collection of permanent masterpieces rather than a rotating storefront.</p>
 
-                <h3>4. Stock Management</h3>
+                <h3 class="serif-font" style="color: var(--forest-green);">4. Stock Management</h3>
                 <p>Artisans are responsible for maintaining accurate stock status. If an item is unavailable, it must be marked as "Out of Stock" immediately through your dashboard. You can toggle this status at any time.</p>
 
-                <h3>5. Quality Standards</h3>
+                <h3 class="serif-font" style="color: var(--forest-green);">5. Quality Standards</h3>
                 <p>Product images must be high-resolution and accurately represent the item. Descriptions should be honest and detailed.</p>
 
-                <h3>6. Account Integrity</h3>
+                <h3 class="serif-font" style="color: var(--forest-green);">6. Account Integrity</h3>
                 <p>Deleting your account will result in the permanent cascading deletion of all your listed products and associated data.</p>
-
-                <div th:if="${!user.sellerTermsAccepted}" style="margin-top: 30px; padding: 20px; background: #fdfaf5; border: 1px solid var(--tan); border-radius: 10px; display: flex; align-items: center; gap: 15px;">
-                    <input type="checkbox" id="agree-check" style="width: 20px; height: 20px; cursor: pointer;" onchange="document.getElementById('accept-btn').disabled = !this.checked; document.getElementById('accept-btn').style.opacity = this.checked ? 1 : 0.5; document.getElementById('accept-btn').style.cursor = this.checked ? 'pointer' : 'not-allowed';">
-                    <label for="agree-check" style="font-weight: bold; color: var(--forest-green); cursor: pointer;">I agree and I have read all terms and conditions</label>
-                </div>
             </div>
 
-            <div style="text-align: center; margin-top: 20px;" th:if="${!user.sellerTermsAccepted}">
-                <form th:action="@{/sell/agree}" method="post">
-                    <button id="accept-btn" type="submit" class="btn-primary" style="width: auto; padding: 12px 60px; opacity: 0.5; cursor: not-allowed;" disabled>Accept & Continue</button>
-                </form>
+            <div th:if="${!user.sellerTermsAccepted}">
+                <div style="margin: 25px 0; display: flex; align-items: center; gap: 12px; justify-content: center; background: #fdfaf5; padding: 20px; border: 1px solid var(--tan); border-radius: 10px;">
+                    <input type="checkbox" id="agree-check" style="width: 22px; height: 22px; cursor: pointer;"
+                           onchange="const btn = document.getElementById('accept-btn'); btn.disabled = !this.checked; btn.style.opacity = this.checked ? 1 : 0.5; btn.style.cursor = this.checked ? 'pointer' : 'not-allowed';">
+                    <label for="agree-check" style="font-size: 1rem; font-weight: bold; cursor: pointer; color: var(--forest-green);">I agree and I have read all terms and conditions</label>
+                </div>
+
+                <div style="text-align: center;">
+                    <form th:action="@{/sell/agree}" method="POST">
+                        <button id="accept-btn" type="submit" class="btn-primary"
+                                style="width: auto; padding: 18px 80px; font-size: 1.1rem; opacity: 0.5; cursor: not-allowed; border-radius: 30px;" disabled>
+                            Accept & Continue
+                        </button>
+                    </form>
+                </div>
             </div>
 
             <div style="text-align: center; margin-top: 40px;" th:if="${user.sellerTermsAccepted}">

@@ -192,7 +192,9 @@ public class ProductService {
     public List<Product> getAllProducts() { return repository.findAll(); }
     public Product getProductById(Long id) { return repository.findById(id).orElse(null); }
     public List<Product> getProductsByCategory(String category) { return repository.findByCategory(category); }
-    public List<Product> searchProducts(String query) { return repository.findByNameContainingIgnoreCase(query); }
+    public List<Product> searchProducts(String query) { 
+        return repository.findByNameContainingIgnoreCaseOrDescriptionContainingIgnoreCaseOrCategoryContainingIgnoreCase(query, query, query); 
+    }
     public Product saveProduct(Product product) { return repository.save(product); }
     public List<Product> getSystemProducts() { return repository.findByUploader("System"); }
     public List<Product> getUserItems(String email) { return repository.findByUploader(email); }

@@ -45,7 +45,17 @@ public class SellerController {
         if (user.isSellerTermsAccepted()) {
             return "redirect:/sell/upload";
         }
-        return "agreement";
+        return "seller-agreement";
+    }
+
+    @GetMapping("/agreement")
+    public String viewAgreement(HttpSession session, Model model) {
+        String email = (String) session.getAttribute("userEmail");
+        if (email == null) return "redirect:/login";
+        User user = userService.getUserByEmail(email);
+        if (user == null) return "redirect:/login";
+        model.addAttribute("user", user);
+        return "seller-agreement";
     }
 
     @PostMapping("/agree")
