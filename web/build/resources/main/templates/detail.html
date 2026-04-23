@@ -17,7 +17,7 @@
 
             <div class="user-profile-header" th:if="${user != null}">
                 <span th:text="${user.fullName}">User Name</span>
-                <img th:src="${user.profilePicture != null && user.profilePicture.startsWith('http') ? user.profilePicture : (user.profilePicture != null ? 'https://res.cloudinary.com/dpt2wn9lh/image/upload/' + (user.profilePicture.contains('.') ? user.profilePicture.substring(0, user.profilePicture.lastIndexOf('.')) : user.profilePicture) : '/images/default-profile.png')}" alt="Profile">
+                <img th:src="${user.profilePicture}" alt="Profile">
             </div>
         </div>
     </header>
@@ -50,7 +50,7 @@
         <div style="display: flex; gap: 60px; align-items: flex-start; margin-top: 20px;">
             <!-- 60% Image Column -->
             <div style="flex: 0 0 60%; position: relative;">
-                <img th:src="${product.imageUrl.startsWith('http') ? product.imageUrl : '/images/' + product.imageUrl}" th:alt="${product.name}"
+                <img th:src="${product.imageUrl}" th:alt="${product.name}"
                      style="width: 100%; border-radius: 20px; box-shadow: var(--shadow);">
 
                 <!-- Badge for System Products or Other Artists -->
@@ -127,7 +127,7 @@
 
                     <a th:href="@{'/product/' + ${p.id}}" style="text-decoration: none; color: inherit;">
                         <div class="product-image-container">
-                            <img th:src="${p.imageUrl.startsWith('http') ? p.imageUrl : '/images/' + p.imageUrl}" th:alt="${p.name}" th:style="${!p.inStock ? 'filter: grayscale(0.8) opacity(0.7);' : ''}">
+                            <img th:src="${p.imageUrl}" th:alt="${p.name}" th:style="${!p.inStock ? 'filter: grayscale(0.8) opacity(0.7);' : ''}">
                         </div>
                         <h3 th:text="${p.name}"></h3>
                         <p class="seller">by [[${p.artist}]]</p>
