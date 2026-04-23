@@ -48,6 +48,15 @@ public class ProductService {
 
     @Transactional
     public void performSafeUpdate() {
+        // Remove Shahid Kapoor's product explicitly if found
+        repository.findAll().stream()
+            .filter(p -> p.getArtist() != null && p.getArtist().toLowerCase().contains("shahid"))
+            .forEach(p -> {
+                reviewRepository.deleteByProductId(p.getId());
+                cartItemRepository.deleteByProductIds(java.util.Collections.singletonList(p.getId()));
+                repository.delete(p);
+            });
+
         List<Product> systemProducts = repository.findByUploader("System");
         
         // Key by Image ID (e.g., "v17") to ensure we update the CORRECT record
@@ -67,6 +76,10 @@ public class ProductService {
         List<Product> toSave = new ArrayList<>();
         String baseUrl = "https://res.cloudinary.com/dpt2wn9lh/image/upload/";
 
+        // Rating cycle: 3, 3.5, 4, 4.5, 5
+        double[] ratingValues = {3.0, 3.5, 4.0, 4.5, 5.0};
+        final int[] rIdx = {0};
+
         java.util.function.BiConsumer<String, String[]> updater = (name, data) -> {
             String imgId = data[1].toLowerCase();
             // Find existing product by its Image ID, or create new if it doesn't exist
@@ -77,7 +90,11 @@ public class ProductService {
             p.setImageUrl(baseUrl + data[1]); // Keep original case for URL
             p.setCategory(data[2]);
             p.setArtist(data[3]);
-            p.setRating(Double.parseDouble(data[4]));
+            
+            // Assign cycling ratings to satisfy "different rating to every product"
+            p.setRating(ratingValues[rIdx[0] % ratingValues.length]);
+            rIdx[0]++;
+
             p.setInStock(Boolean.parseBoolean(data[5]));
             
             if (p.getId() == null) {
@@ -158,6 +175,17 @@ public class ProductService {
         updater.accept("Set of 4 Hand-Painted Plates", new String[]{"Elevate your dessert course with this set of four hand-painted ceramic plates. Each plate features a unique, delicate design inspired by nature, meticulously rendered with a fine brush. They are not only functional for serving treats but also beautiful enough to be displayed as a wall art collection, showcasing a high level of artistic detail and handmade quality in every stroke.", "po10", "Pottery", "Pratik Gandhi", "4.4", "true"});
 
         repository.saveAll(toSave);
+
+        // Delete any orphan "System" products that were not updated (including v16/Shahid)
+        Set<Long> savedIds = toSave.stream().map(Product::getId).filter(Objects::nonNull).collect(Collectors.toSet());
+        for (Product p : systemProducts) {
+            if (!savedIds.contains(p.getId())) {
+                reviewRepository.deleteByProductId(p.getId());
+                cartItemRepository.deleteByProductIds(java.util.Collections.singletonList(p.getId()));
+                repository.delete(p);
+            }
+        }
+
         repository.flush();
     }
 
